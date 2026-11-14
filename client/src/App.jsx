@@ -4,8 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
 import { SocketProvider } from './context/SocketContext';
-import Navbar from './components/common/Navbar';
-import BottomNav from './components/common/BottomNav';
+import AppLayout from './components/layout/AppLayout';
 
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -24,7 +23,7 @@ const ProtectedRoute = ({ children }) => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-9 h-9 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -43,7 +42,7 @@ const PublicRoute = ({ children }) => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-9 h-9 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -55,9 +54,8 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
-function AppContent() {
+function AppRoutes() {
   const handleOpenCreatePost = () => {
-    // If on home, scroll to top and focus
     if (window.location.pathname === '/') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       const textarea = document.querySelector('textarea');
@@ -68,59 +66,81 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200 pb-20 md:pb-6">
-      <Navbar onOpenCreatePost={handleOpenCreatePost} />
+    <Routes>
+      {/* Auth Pages (Clean Split Screen without App Shell) */}
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <PublicRoute>
+            <Register />
+          </PublicRoute>
+        }
+      />
 
-      <div className="flex-1">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Home />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <Login />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <PublicRoute>
-                <Register />
-              </PublicRoute>
-            }
-          />
-          <Route path="/profile/:username" element={<Profile />} />
-          <Route path="/posts/:id" element={<PostDetail />} />
-          <Route
-            path="/search"
-            element={
-              <ProtectedRoute>
-                <Search />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute>
-                <Notifications />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </div>
-
-      <BottomNav onOpenCreatePost={handleOpenCreatePost} />
-    </div>
+      {/* Main App Pages (Wrapped in 3-Column App Shell) */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <AppLayout onOpenCreatePost={handleOpenCreatePost}>
+              <Home />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile/:username"
+        element={
+          <AppLayout onOpenCreatePost={handleOpenCreatePost}>
+            <Profile />
+          </AppLayout>
+        }
+      />
+      <Route
+        path="/posts/:id"
+        element={
+          <AppLayout onOpenCreatePost={handleOpenCreatePost}>
+            <PostDetail />
+          </AppLayout>
+        }
+      />
+      <Route
+        path="/search"
+        element={
+          <ProtectedRoute>
+            <AppLayout onOpenCreatePost={handleOpenCreatePost}>
+              <Search />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <AppLayout onOpenCreatePost={handleOpenCreatePost}>
+              <Notifications />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="*"
+        element={
+          <AppLayout onOpenCreatePost={handleOpenCreatePost}>
+            <NotFound />
+          </AppLayout>
+        }
+      />
+    </Routes>
   );
 }
 
@@ -130,7 +150,7 @@ function App() {
       <ToastProvider>
         <AuthProvider>
           <SocketProvider>
-            <AppContent />
+            <AppRoutes />
           </SocketProvider>
         </AuthProvider>
       </ToastProvider>

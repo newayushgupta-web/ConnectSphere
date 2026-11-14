@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import PostComposer from '../components/post/PostComposer';
 import PostCard from '../components/post/PostCard';
-import WhoToFollow from '../components/user/WhoToFollow';
-import { PostSkeleton } from '../components/common/SkeletonLoader';
-import EmptyState from '../components/common/EmptyState';
+import { SkeletonPost } from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
+import Button from '../components/ui/Button';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,6 +16,10 @@ const Home = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [isDiscovery, setIsDiscovery] = useState(false);
+
+  useEffect(() => {
+    document.title = 'Home Feed | ConnectSphere';
+  }, []);
 
   const fetchFeed = useCallback(async (pageNum = 1, append = false) => {
     if (pageNum === 1) setLoading(true);
@@ -55,87 +59,80 @@ const Home = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Feed Column */}
-        <main className="lg:col-span-2">
-          {/* Post Creation Box */}
-          <PostComposer onPostCreated={handlePostCreated} />
+    <div className="w-full">
+      {/* Top Welcome & Subheading */}
+      <div className="flex items-center justify-between mb-5 px-1">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+            Home Feed
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Stories and real-time updates from your sphere
+          </p>
+        </div>
 
-          {/* Discovery banner when user follows 0 people */}
-          {isDiscovery && posts.length > 0 && (
-            <div className="flex items-center gap-2 px-4 py-3 mb-5 bg-gradient-to-r from-brand-50 to-indigo-50 dark:from-brand-950/40 dark:to-indigo-950/30 rounded-2xl border border-brand-100 dark:border-brand-900/40 text-brand-700 dark:text-brand-300 text-xs sm:text-sm">
-              <Sparkles className="w-4 h-4 flex-shrink-0" />
-              <span>
-                <strong>Discovery Feed:</strong> Showing trending posts from across the ConnectSphere community. Follow users on the right to personalize your home stream!
-              </span>
-            </div>
-          )}
-
-          {/* Feed Content */}
-          {loading ? (
-            <div>
-              <PostSkeleton />
-              <PostSkeleton />
-              <PostSkeleton />
-            </div>
-          ) : posts.length === 0 ? (
-            <EmptyState
-              title="Your feed is quiet"
-              description="Be the first to share an update, or explore creators to fill your feed with inspiring stories!"
-            />
-          ) : (
-            <div>
-              {posts.map((post) => (
-                <PostCard
-                  key={post._id}
-                  post={post}
-                  onPostDeleted={handlePostDeleted}
-                />
-              ))}
-
-              {/* Load More Button */}
-              {hasMore && (
-                <div className="text-center mt-6 mb-10">
-                  <button
-                    onClick={() => fetchFeed(page + 1, true)}
-                    disabled={loadingMore}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-sm shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-all disabled:opacity-50"
-                  >
-                    {loadingMore ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Loading more...</span>
-                      </>
-                    ) : (
-                      <span>Load More Stories</span>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </main>
-
-        {/* Right Sidebar Column */}
-        <aside className="hidden lg:block space-y-6">
-          <div className="sticky top-20 space-y-6">
-            {/* Who To Follow Component */}
-            <WhoToFollow />
-
-            {/* Footer / Info */}
-            <footer className="px-4 text-xs text-slate-400 space-y-2">
-              <div className="flex flex-wrap gap-x-3 gap-y-1">
-                <span>About</span>
-                <span>Privacy</span>
-                <span>Terms</span>
-                <span>CodeAlpha Internship</span>
-              </div>
-              <p>&copy; {new Date().getFullYear()} ConnectSphere Platform. Built with care.</p>
-            </footer>
-          </div>
-        </aside>
+        <button
+          onClick={() => fetchFeed(1)}
+          disabled={loading}
+          aria-label="Refresh feed"
+          title="Refresh feed"
+          className="p-2 rounded-xl text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
+
+      {/* Post Composer */}
+      <PostComposer onPostCreated={handlePostCreated} />
+
+      {/* Discovery Feed Banner */}
+      {isDiscovery && posts.length > 0 && (
+        <div className="flex items-start gap-3 p-4 mb-5 bg-gradient-brand-subtle rounded-3xl border border-indigo-200/50 dark:border-indigo-800/40 text-xs sm:text-sm text-indigo-900 dark:text-indigo-200 animate-in fade-in duration-200">
+          <Sparkles className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
+          <p className="leading-relaxed">
+            <strong>Community Discovery:</strong> Showing trending posts from across ConnectSphere. Follow creators to personalize your feed!
+          </p>
+        </div>
+      )}
+
+      {/* Feed Content */}
+      {loading ? (
+        <div className="space-y-4">
+          <SkeletonPost />
+          <SkeletonPost />
+          <SkeletonPost />
+        </div>
+      ) : posts.length === 0 ? (
+        <EmptyState
+          title="Your feed is quiet"
+          description="Be the first to share an update, or explore creators to fill your feed with inspiring stories!"
+        />
+      ) : (
+        <div>
+          {posts.map((post) => (
+            <PostCard
+              key={post._id}
+              post={post}
+              onPostDeleted={handlePostDeleted}
+            />
+          ))}
+
+          {/* Infinite Scroll / Load More */}
+          {hasMore && (
+            <div className="text-center mt-6 mb-8">
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => fetchFeed(page + 1, true)}
+                isLoading={loadingMore}
+                leftIcon={<RefreshCw className="w-4 h-4" />}
+              >
+                Load More Stories
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -5,13 +5,21 @@ import { Heart, MessageCircle, UserPlus, CheckCheck, Bell } from 'lucide-react';
 import api from '../services/api';
 import { useSocket } from '../context/SocketContext';
 import { useToast } from '../context/ToastContext';
-import EmptyState from '../components/common/EmptyState';
+import Avatar from '../components/ui/Avatar';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import EmptyState from '../components/ui/EmptyState';
+import { SkeletonAvatar, SkeletonLine } from '../components/ui/Skeleton';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const { setUnreadNotificationsCount } = useSocket();
   const { showToast } = useToast();
+
+  useEffect(() => {
+    document.title = 'Notifications | ConnectSphere';
+  }, []);
 
   const fetchNotifications = async () => {
     try {
@@ -49,44 +57,51 @@ const Notifications = () => {
       case 'like':
         return <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />;
       case 'comment':
-        return <MessageCircle className="w-3.5 h-3.5 text-sky-500" />;
+        return <MessageCircle className="w-3.5 h-3.5 text-indigo-500" />;
       case 'follow':
-        return <UserPlus className="w-3.5 h-3.5 text-violet-500" />;
+        return <UserPlus className="w-3.5 h-3.5 text-purple-500" />;
       default:
-        return <Bell className="w-3.5 h-3.5 text-brand-500" />;
+        return <Bell className="w-3.5 h-3.5 text-indigo-500" />;
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
+    <div className="w-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-5 px-1">
         <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             Notifications
-          </h2>
+          </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Stay up to date with activity on your posts and profile.
+            Activity and interactions from your sphere
           </p>
         </div>
 
         {notifications.some((n) => !n.isRead) && (
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleMarkAllRead}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-brand-50 dark:hover:bg-brand-950/40 hover:text-brand-600 text-xs font-bold transition-all shadow-sm"
+            leftIcon={<CheckCheck className="w-3.5 h-3.5" />}
           >
-            <CheckCheck className="w-3.5 h-3.5" />
-            <span>Mark all read</span>
-          </button>
+            Mark all read
+          </Button>
         )}
       </div>
 
       {/* Content */}
       {loading ? (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 animate-pulse space-y-4">
-          <div className="w-full h-12 bg-slate-100 dark:bg-slate-800 rounded-xl" />
-          <div className="w-full h-12 bg-slate-100 dark:bg-slate-800 rounded-xl" />
-          <div className="w-full h-12 bg-slate-100 dark:bg-slate-800 rounded-xl" />
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} padding="p-4" className="flex items-center gap-3.5 animate-pulse">
+              <SkeletonAvatar size="w-10 h-10" />
+              <div className="space-y-1.5 flex-1">
+                <SkeletonLine width="w-48" height="h-3.5" />
+                <SkeletonLine width="w-24" height="h-2.5" />
+              </div>
+            </Card>
+          ))}
         </div>
       ) : notifications.length === 0 ? (
         <EmptyState
@@ -95,7 +110,7 @@ const Notifications = () => {
           description="When members follow you, like your posts, or drop comments, they'll appear right here."
         />
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-soft divide-y divide-slate-100 dark:divide-slate-800/80 overflow-hidden">
+        <Card padding="p-1 sm:p-2" className="divide-y divide-slate-100 dark:divide-slate-800">
           {notifications.map((n) => {
             const targetUrl =
               n.type === 'follow'
@@ -106,19 +121,16 @@ const Notifications = () => {
               <Link
                 key={n._id}
                 to={targetUrl}
-                className={`flex items-start gap-3.5 p-4 sm:p-5 transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50 ${
-                  !n.isRead ? 'bg-brand-50/30 dark:bg-brand-950/20' : ''
+                className={`flex items-start gap-3.5 p-3.5 sm:p-4 rounded-2xl transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50 ${
+                  !n.isRead ? 'bg-indigo-50/40 dark:bg-indigo-950/20' : ''
                 }`}
               >
                 {/* Sender Avatar with type icon overlay */}
                 <div className="relative flex-shrink-0">
-                  <img
-                    src={
-                      n.sender?.avatar ||
-                      `https://api.dicebear.com/7.x/bottts/svg?seed=${n.sender?.username}`
-                    }
-                    alt={n.sender?.username}
-                    className="w-10 h-10 rounded-full object-cover bg-slate-200 dark:bg-slate-700"
+                  <Avatar
+                    src={n.sender?.avatar}
+                    name={n.sender?.username}
+                    size="md"
                   />
                   <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center border border-slate-100 dark:border-slate-800">
                     {getNotificationIcon(n.type)}
@@ -133,7 +145,7 @@ const Notifications = () => {
                     </strong>{' '}
                     {n.type === 'like' && 'liked your post'}
                     {n.type === 'comment' && 'commented on your post'}
-                    {n.type === 'follow' && 'started following you'}
+                    {n.type === 'follow' && 'started following your sphere'}
                   </p>
 
                   {n.post && n.post.text && (
@@ -149,14 +161,14 @@ const Notifications = () => {
                   </span>
                 </div>
 
-                {/* Unread dot indicator */}
+                {/* Unread indicator */}
                 {!n.isRead && (
-                  <span className="w-2 h-2 rounded-full bg-brand-600 dark:bg-brand-400 flex-shrink-0 self-center" />
+                  <span className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400 flex-shrink-0 self-center" />
                 )}
               </Link>
             );
           })}
-        </div>
+        </Card>
       )}
     </div>
   );

@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import api from '../services/api';
 import PostCard from '../components/post/PostCard';
-import { PostSkeleton } from '../components/common/SkeletonLoader';
-import EmptyState from '../components/common/EmptyState';
+import { SkeletonPost } from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
+import Button from '../components/ui/Button';
 
 const PostDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    document.title = 'Post Discussion | ConnectSphere';
+  }, []);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -34,18 +39,21 @@ const PostDetail = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
+    <div className="w-full">
       {/* Back Button */}
-      <button
-        onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-2 mb-6 px-3.5 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm transition-all"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>Back</span>
-      </button>
+      <div className="mb-5">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate(-1)}
+          leftIcon={<ArrowLeft className="w-4 h-4" />}
+        >
+          Back
+        </Button>
+      </div>
 
       {loading ? (
-        <PostSkeleton />
+        <SkeletonPost />
       ) : !post ? (
         <EmptyState
           title="Post not found"

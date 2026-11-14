@@ -1,8 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { Image, X, Send, Sparkles } from 'lucide-react';
+import { Image, X, Sparkles, Send } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
+import Avatar from '../ui/Avatar';
+import Button from '../ui/Button';
 
 const PostComposer = ({ onPostCreated }) => {
   const { user } = useAuth();
@@ -39,7 +41,7 @@ const PostComposer = ({ onPostCreated }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!text.trim() && !imageFile) {
-      showToast('Please add some text or an image to post', 'error');
+      showToast('Please add text or a photo to post', 'error');
       return;
     }
 
@@ -52,13 +54,11 @@ const PostComposer = ({ onPostCreated }) => {
       }
 
       const res = await api.post('/posts', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       if (res.data.success) {
-        showToast('Post shared with your sphere!', 'success');
+        showToast('Your post is live in the sphere!', 'success');
         setText('');
         removeImage();
         if (onPostCreated) {
@@ -66,89 +66,104 @@ const PostComposer = ({ onPostCreated }) => {
         }
       }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to publish post';
-      showToast(msg, 'error');
+      showToast(err.response?.data?.message || 'Failed to publish post', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-soft mb-6 transition-all">
+    <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-soft mb-6 transition-all">
       <form onSubmit={handleSubmit}>
-        <div className="flex gap-3">
-          <img
-            src={user?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${user?.username}`}
-            alt={user?.username}
-            className="w-11 h-11 rounded-full object-cover bg-slate-200 dark:bg-slate-700 flex-shrink-0 border border-slate-200 dark:border-slate-700"
+        <div className="flex gap-3.5">
+          <Avatar
+            src={user?.avatar}
+            name={user?.username}
+            size="md"
+            status="online"
           />
 
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder={`What's happening in your sphere, ${user?.username}?`}
+              placeholder={`What's happening in your sphere, ${user?.username || 'friend'}?`}
               maxLength={1000}
               rows={3}
-              className="w-full bg-transparent resize-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none text-base"
+              className="w-full bg-transparent resize-none text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none text-sm sm:text-base leading-relaxed"
             />
 
-            {/* Image Preview */}
+            {/* Image Preview with Remove Button */}
             {imagePreview && (
-              <div className="relative mt-2 mb-3 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 max-h-80">
+              <div className="relative mt-2 mb-3 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 max-h-80 animate-in fade-in zoom-in-95 duration-150">
                 <img
                   src={imagePreview}
-                  alt="Upload preview"
+                  alt="Post attachment preview"
                   className="w-full h-auto object-cover max-h-80 rounded-2xl"
                 />
                 <button
                   type="button"
                   onClick={removeImage}
-                  className="absolute top-3 right-3 p-1.5 rounded-full bg-slate-900/70 hover:bg-slate-900 text-white backdrop-blur-sm transition-all"
+                  aria-label="Remove image"
+                  className="absolute top-3 right-3 p-1.5 rounded-full bg-slate-900/75 hover:bg-slate-900 text-white backdrop-blur-md transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             )}
 
+            {/* Bottom Controls Bar */}
             <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800/80">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <input
                   type="file"
                   ref={fileInputRef}
                   onChange={handleImageChange}
                   accept="image/jpeg,image/png,image/webp,image/gif"
                   className="hidden"
-                  id="post-image-input"
+                  id="composer-image-upload"
                 />
                 <label
-                  htmlFor="post-image-input"
-                  className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition-colors"
+                  htmlFor="composer-image-upload"
+                  className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition-colors"
                 >
-                  <Image className="w-4 h-4 text-brand-500" />
+                  <Image className="w-4 h-4 text-indigo-500" />
                   <span>Photo</span>
                 </label>
+
+                <button
+                  type="button"
+                  onClick={() => setText((prev) => (prev ? `${prev} #ConnectSphere` : '#ConnectSphere'))}
+                  className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Add tag</span>
+                </button>
               </div>
 
               <div className="flex items-center gap-3">
-                <span className={`text-xs ${text.length > 900 ? 'text-amber-500 font-semibold' : 'text-slate-400'}`}>
+                <span
+                  className={`text-xs ${
+                    text.length > 900
+                      ? 'text-rose-500 font-bold'
+                      : text.length > 700
+                      ? 'text-amber-500 font-medium'
+                      : 'text-slate-400'
+                  }`}
+                >
                   {text.length}/1000
                 </span>
 
-                <button
+                <Button
                   type="submit"
-                  disabled={loading || (!text.trim() && !imageFile)}
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm transition-all hover:shadow hover:scale-105 active:scale-95"
+                  size="sm"
+                  variant="primary"
+                  isLoading={loading}
+                  disabled={!text.trim() && !imageFile}
+                  rightIcon={<Send className="w-3.5 h-3.5" />}
                 >
-                  {loading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="w-3.5 h-3.5" />
-                      <span>Post</span>
-                    </>
-                  )}
-                </button>
+                  Post
+                </Button>
               </div>
             </div>
           </div>

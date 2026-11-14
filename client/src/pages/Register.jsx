@@ -1,172 +1,285 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, Mail, Lock, User, FileText, ArrowRight } from 'lucide-react';
+import { User, Mail, Lock, FileText, ArrowRight, Check, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import AuthLayout from '../components/auth/AuthLayout';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
+
+// Password strength calculation
+const calculateStrength = (pass = '') => {
+  if (!pass) return { score: 0, label: '', color: 'bg-slate-200' };
+  let score = 0;
+  if (pass.length >= 6) score += 1;
+  if (pass.length >= 10) score += 1;
+  if (/[0-9]/.test(pass)) score += 1;
+  if (/[^A-Za-z0-9]/.test(pass)) score += 1;
+
+  switch (score) {
+    case 1:
+      return { score: 1, label: 'Weak', color: 'bg-rose-500' };
+    case 2:
+      return { score: 2, label: 'Fair', color: 'bg-amber-500' };
+    case 3:
+      return { score: 3, label: 'Good', color: 'bg-sky-500' };
+    case 4:
+      return { score: 4, label: 'Strong', color: 'bg-emerald-500' };
+    default:
+      return { score: 0, label: '', color: 'bg-slate-200' };
+  }
+};
 
 const Register = () => {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: '',
+    confirmPassword: '',
     bio: '',
   });
+
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+
   const { register } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    document.title = 'Create Account | ConnectSphere';
+  }, []);
+
   const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: null }));
+    }
+  };
+
+  const strength = calculateStrength(formData.password);
+  const passwordsMatch =
+    formData.confirmPassword && formData.password === formData.confirmPassword;
+  const passwordsMismatch =
+    formData.confirmPassword && formData.password !== formData.confirmPassword;
+
+  const validateForm = () => {
+    const errs = {};
+    if (!formData.username.trim()) {
+      errs.username = 'Username is required';
+    } else if (!/^[a-zA-Z0-9_]{3,30}$/.test(formData.username.trim())) {
+      errs.username = 'Username must be 3-30 letters, numbers, or underscores';
+    }
+
+    if (!formData.email.trim()) {
+      errs.email = 'Email address is required';
+    } else if (!/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
+      errs.email = 'Please provide a valid email address';
+    }
+
+    if (!formData.password) {
+      errs.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      errs.password = 'Password must be at least 6 characters';
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      errs.confirmPassword = 'Passwords do not match';
+    }
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.username || !formData.email || !formData.password) {
-      showToast('Please fill in all required fields', 'error');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      showToast('Password must be at least 6 characters long', 'error');
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
+    setErrors({});
+
     try {
-      const result = await register(formData);
+      const result = await register({
+        username: formData.username.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        bio: formData.bio.trim(),
+      });
+
       if (result.success) {
         showToast('Account created successfully! Welcome to ConnectSphere.', 'success');
         navigate('/');
       } else {
+        setErrors({ form: result.message || 'Registration failed' });
         showToast(result.message || 'Registration failed', 'error');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Registration failed', 'error');
+      const msg = err.response?.data?.message || 'Registration failed. Please try again.';
+      setErrors({ form: msg });
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center px-4 py-12">
-      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200/80 dark:border-slate-800 shadow-soft transition-all">
-        {/* Brand Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-600 to-violet-500 text-white shadow-lg shadow-brand-500/20 mb-3">
-            <Sparkles className="w-7 h-7" />
+    <AuthLayout
+      title="Create your account"
+      subtitle="Join ConnectSphere to start sharing stories and connecting with creators."
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {errors.form && (
+          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-600 dark:text-rose-400 font-medium">
+            {errors.form}
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Join ConnectSphere
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Create your account to start sharing ideas with the world.
-          </p>
+        )}
+
+        {/* Username */}
+        <Input
+          label="Username"
+          id="username"
+          name="username"
+          value={formData.username}
+          onChange={handleChange}
+          placeholder="e.g. tech_explorer"
+          icon={User}
+          error={errors.username}
+          helperText="3 to 30 characters (letters, numbers, underscores)"
+          required
+        />
+
+        {/* Email */}
+        <Input
+          label="Email address"
+          id="email"
+          name="email"
+          type="email"
+          value={formData.email}
+          onChange={handleChange}
+          placeholder="you@example.com"
+          icon={Mail}
+          error={errors.email}
+          required
+        />
+
+        {/* Password */}
+        <div>
+          <Input
+            label="Password"
+            id="password"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="At least 6 characters"
+            icon={Lock}
+            error={errors.password}
+            required
+          />
+
+          {/* Password Strength Meter */}
+          {formData.password && (
+            <div className="mt-2 space-y-1.5 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-500 dark:text-slate-400 font-medium">
+                  Password strength:
+                </span>
+                <span className="font-bold text-slate-700 dark:text-slate-200">
+                  {strength.label}
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5 h-1.5">
+                {[1, 2, 3, 4].map((step) => (
+                  <div
+                    key={step}
+                    className={`h-full rounded-full transition-all duration-300 ${
+                      step <= strength.score ? strength.color : 'bg-slate-200 dark:bg-slate-700'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Register Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Username <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                name="username"
-                required
-                value={formData.username}
-                onChange={handleChange}
-                placeholder="tech_explorer"
-                className="w-full bg-slate-50 dark:bg-slate-800/60 pl-10 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
-              />
+        {/* Confirm Password */}
+        <div>
+          <Input
+            label="Confirm password"
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            placeholder="Re-enter your password"
+            icon={Lock}
+            error={errors.confirmPassword}
+            required
+          />
+          {formData.confirmPassword && (
+            <div className="mt-1 text-[11px] flex items-center gap-1 font-medium">
+              {passwordsMatch ? (
+                <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Passwords match
+                </span>
+              ) : passwordsMismatch ? (
+                <span className="text-rose-500 dark:text-rose-400 flex items-center gap-1">
+                  <X className="w-3 h-3" /> Passwords do not match
+                </span>
+              ) : null}
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Email Address <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="email"
-                name="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="you@example.com"
-                className="w-full bg-slate-50 dark:bg-slate-800/60 pl-10 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Password <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="password"
-                name="password"
-                required
-                minLength={6}
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="At least 6 characters"
-                className="w-full bg-slate-50 dark:bg-slate-800/60 pl-10 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Bio (Optional)
-            </label>
-            <div className="relative">
-              <FileText className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-              <textarea
-                name="bio"
-                rows={2}
-                maxLength={160}
-                value={formData.bio}
-                onChange={handleChange}
-                placeholder="Software engineer, coffee lover, open-source enthusiast..."
-                className="w-full bg-slate-50 dark:bg-slate-800/60 pl-10 pr-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all resize-none"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-2 py-3 px-4 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-bold rounded-2xl shadow-md shadow-brand-500/20 hover:shadow-lg transition-all flex items-center justify-center gap-2 group text-sm"
-          >
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <span>Create Account</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Switch Link */}
-        <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
-          Already have an account?{' '}
-          <Link
-            to="/login"
-            className="font-bold text-brand-600 dark:text-brand-400 hover:underline"
-          >
-            Sign in instead
-          </Link>
+          )}
         </div>
+
+        {/* Bio (Optional) */}
+        <div className="space-y-1.5">
+          <label
+            htmlFor="bio"
+            className="text-xs font-semibold text-slate-700 dark:text-slate-200 select-none flex items-center justify-between"
+          >
+            <span>Bio (optional)</span>
+            <span className="text-[11px] text-slate-400 font-normal">
+              {formData.bio.length}/160
+            </span>
+          </label>
+          <div className="relative">
+            <textarea
+              id="bio"
+              name="bio"
+              rows={2}
+              maxLength={160}
+              value={formData.bio}
+              onChange={handleChange}
+              placeholder="Tell others a little about what you build or create..."
+              className="w-full text-sm rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 resize-none transition-all"
+            />
+          </div>
+        </div>
+
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          isLoading={loading}
+          className="w-full mt-2"
+          rightIcon={<ArrowRight className="w-4 h-4" />}
+        >
+          Create Account
+        </Button>
+      </form>
+
+      {/* Switch to Login */}
+      <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
+        Already have an account?{' '}
+        <Link
+          to="/login"
+          className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+        >
+          Sign in instead
+        </Link>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 

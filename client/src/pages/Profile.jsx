@@ -10,6 +10,7 @@ import {
   Heart,
   MessageCircle,
   X,
+  Sparkles,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import api from '../services/api';
@@ -17,8 +18,11 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import PostCard from '../components/post/PostCard';
 import EditProfileModal from '../components/user/EditProfileModal';
-import { ProfileSkeleton, PostSkeleton } from '../components/common/SkeletonLoader';
-import EmptyState from '../components/common/EmptyState';
+import { SkeletonProfile, SkeletonPost } from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
+import Avatar from '../components/ui/Avatar';
+import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
 
 const Profile = () => {
   const { username } = useParams();
@@ -28,9 +32,15 @@ const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('grid'); // 'grid' | 'feed'
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'feed'
+  const [activeTab, setActiveTab] = useState('posts'); // 'posts' | 'media'
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [followModal, setFollowModal] = useState({ open: false, title: '', users: [] });
+  const [isHoveringFollow, setIsHoveringFollow] = useState(false);
+
+  useEffect(() => {
+    document.title = username ? `@${username} | ConnectSphere` : 'Profile | ConnectSphere';
+  }, [username]);
 
   const fetchProfileAndPosts = useCallback(async () => {
     setLoading(true);
@@ -60,7 +70,7 @@ const Profile = () => {
 
   const handleFollowToggle = async () => {
     if (!isAuthenticated) {
-      showToast('Please log in to follow users', 'info');
+      showToast('Please sign in to follow users', 'info');
       return;
     }
 
@@ -98,19 +108,19 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <ProfileSkeleton />
-        <PostSkeleton />
+      <div className="w-full">
+        <SkeletonProfile />
+        <SkeletonPost />
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16">
+      <div className="w-full py-12">
         <EmptyState
           title="User Not Found"
-          description={`The user @${username} does not exist or may have been removed.`}
+          description={`The member @${username} does not exist or may have been removed.`}
           actionLabel="Return Home"
           onAction={() => (window.location.href = '/')}
         />
@@ -119,164 +129,209 @@ const Profile = () => {
   }
 
   const isSelf = currentUser && currentUser.username === profile.username;
+  const filteredPosts =
+    activeTab === 'media' ? posts.filter((p) => !!p.image) : posts;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
-      {/* Instagram-style Profile Header */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-slate-800 shadow-soft mb-8">
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-10">
-          {/* Avatar */}
-          <div className="relative">
-            <img
-              src={profile.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${profile.username}`}
-              alt={profile.username}
-              className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-lg bg-slate-100 dark:bg-slate-800"
+    <div className="w-full">
+      {/* Profile Header Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-soft mb-6">
+        {/* Modern Cover Banner */}
+        <div className="relative h-36 sm:h-48 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 overflow-hidden">
+          <div className="absolute inset-0 bg-mesh opacity-30" />
+        </div>
+
+        <div className="px-6 sm:px-8 pb-6 sm:pb-8 pt-0 relative">
+          {/* Avatar and Action Button Row */}
+          <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-4 -mt-16 sm:-mt-20 mb-5">
+            <Avatar
+              src={profile.avatar}
+              name={profile.username}
+              size="xl"
+              border
+              status={isSelf ? 'online' : null}
             />
-          </div>
 
-          {/* User Details & Stats */}
-          <div className="flex-1 text-center sm:text-left min-w-0">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  {profile.username}
-                </h2>
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-slate-400 mt-1">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>
-                    Joined {profile.createdAt ? format(new Date(profile.createdAt), 'MMMM yyyy') : 'recently'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div>
-                {isSelf ? (
-                  <button
-                    onClick={() => setIsEditModalOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold transition-all shadow-sm"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    <span>Edit Profile</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleFollowToggle}
-                    className={`inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-bold shadow-sm transition-all ${
-                      profile.isFollowing
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600'
-                        : 'bg-brand-600 hover:bg-brand-700 text-white'
-                    }`}
-                  >
-                    {profile.isFollowing ? (
+            <div>
+              {isSelf ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditModalOpen(true)}
+                  leftIcon={<Edit2 className="w-3.5 h-3.5" />}
+                >
+                  Edit Profile
+                </Button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleFollowToggle}
+                  onMouseEnter={() => setIsHoveringFollow(true)}
+                  onMouseLeave={() => setIsHoveringFollow(false)}
+                  className={`inline-flex items-center gap-1.5 px-5 py-2.5 rounded-2xl text-xs font-bold transition-all shadow-sm ${
+                    profile.isFollowing
+                      ? isHoveringFollow
+                        ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-500/20'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200'
+                      : 'bg-gradient-brand text-white shadow-indigo-500/25 hover:brightness-105'
+                  }`}
+                >
+                  {profile.isFollowing ? (
+                    isHoveringFollow ? (
                       <>
-                        <UserCheck className="w-3.5 h-3.5" />
-                        <span>Following</span>
+                        <X className="w-3.5 h-3.5" />
+                        <span>Unfollow</span>
                       </>
                     ) : (
                       <>
-                        <UserPlus className="w-3.5 h-3.5" />
-                        <span>Follow</span>
+                        <UserCheck className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>Following</span>
                       </>
-                    )}
-                  </button>
-                )}
-              </div>
+                    )
+                  ) : (
+                    <>
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Follow</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
+          </div>
 
-            {/* Stats: Posts, Followers, Following */}
-            <div className="flex items-center justify-center sm:justify-start gap-8 py-3 border-y border-slate-100 dark:border-slate-800/80 mb-4">
-              <div className="text-center sm:text-left">
-                <span className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-slate-100 mr-1.5">
-                  {profile.postCount}
-                </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">posts</span>
-              </div>
+          {/* User Name & Bio */}
+          <div className="text-center sm:text-left space-y-2 mb-5">
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              {profile.username}
+            </h1>
+            <p className="text-xs text-slate-400">@{profile.username}</p>
 
-              <button
-                onClick={() =>
-                  setFollowModal({
-                    open: true,
-                    title: 'Followers',
-                    users: profile.followers || [],
-                  })
-                }
-                className="text-center sm:text-left hover:opacity-80 transition-opacity"
-              >
-                <span className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-slate-100 mr-1.5">
-                  {profile.followersCount}
-                </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">followers</span>
-              </button>
-
-              <button
-                onClick={() =>
-                  setFollowModal({
-                    open: true,
-                    title: 'Following',
-                    users: profile.following || [],
-                  })
-                }
-                className="text-center sm:text-left hover:opacity-80 transition-opacity"
-              >
-                <span className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-slate-100 mr-1.5">
-                  {profile.followingCount}
-                </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">following</span>
-              </button>
-            </div>
-
-            {/* Bio */}
             {profile.bio && (
-              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line pt-1 max-w-xl">
                 {profile.bio}
               </p>
             )}
+
+            <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-slate-400 pt-1">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>
+                Joined {profile.createdAt ? format(new Date(profile.createdAt), 'MMMM yyyy') : 'recently'}
+              </span>
+            </div>
+          </div>
+
+          {/* Interactive Stats Bar */}
+          <div className="flex items-center justify-center sm:justify-start gap-8 py-3.5 border-t border-slate-100 dark:border-slate-800/80">
+            <div className="text-center sm:text-left">
+              <span className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white mr-1.5">
+                {profile.postCount}
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">posts</span>
+            </div>
+
+            <button
+              onClick={() =>
+                setFollowModal({
+                  open: true,
+                  title: 'Followers',
+                  users: profile.followers || [],
+                })
+              }
+              className="text-center sm:text-left hover:opacity-80 transition-opacity"
+            >
+              <span className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white mr-1.5">
+                {profile.followersCount}
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">followers</span>
+            </button>
+
+            <button
+              onClick={() =>
+                setFollowModal({
+                  open: true,
+                  title: 'Following',
+                  users: profile.following || [],
+                })
+              }
+              className="text-center sm:text-left hover:opacity-80 transition-opacity"
+            >
+              <span className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white mr-1.5">
+                {profile.followingCount}
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">following</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* View Tabs */}
-      <div className="flex items-center justify-center gap-6 border-b border-slate-200 dark:border-slate-800 mb-6">
-        <button
-          onClick={() => setActiveTab('grid')}
-          className={`flex items-center gap-2 pb-3 px-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 ${
-            activeTab === 'grid'
-              ? 'border-brand-600 text-brand-600 dark:text-brand-400'
-              : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-          }`}
-        >
-          <Grid className="w-4 h-4" />
-          <span>Grid</span>
-        </button>
+      {/* Tabs and Grid/Feed Switcher */}
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 mb-6 px-1">
+        {/* Content Tabs */}
+        <div className="flex items-center gap-6">
+          <button
+            onClick={() => setActiveTab('posts')}
+            className={`pb-3 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 ${
+              activeTab === 'posts'
+                ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+            }`}
+          >
+            Posts ({posts.length})
+          </button>
 
-        <button
-          onClick={() => setActiveTab('feed')}
-          className={`flex items-center gap-2 pb-3 px-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 ${
-            activeTab === 'feed'
-              ? 'border-brand-600 text-brand-600 dark:text-brand-400'
-              : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-          }`}
-        >
-          <List className="w-4 h-4" />
-          <span>Feed View</span>
-        </button>
+          <button
+            onClick={() => setActiveTab('media')}
+            className={`pb-3 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 ${
+              activeTab === 'media'
+                ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+            }`}
+          >
+            Photos ({posts.filter((p) => !!p.image).length})
+          </button>
+        </div>
+
+        {/* View Mode Toggle (Grid vs Feed) */}
+        <div className="flex items-center gap-1 pb-3">
+          <button
+            onClick={() => setViewMode('grid')}
+            aria-label="Grid view"
+            className={`p-1.5 rounded-lg transition-colors ${
+              viewMode === 'grid'
+                ? 'bg-slate-200/80 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400'
+                : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <Grid className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('feed')}
+            aria-label="Feed view"
+            className={`p-1.5 rounded-lg transition-colors ${
+              viewMode === 'feed'
+                ? 'bg-slate-200/80 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400'
+                : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <List className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Tab Content */}
-      {posts.length === 0 ? (
+      {filteredPosts.length === 0 ? (
         <EmptyState
-          title="No posts yet"
+          title={activeTab === 'media' ? 'No photos yet' : 'No posts yet'}
           description={
             isSelf
-              ? 'Share your first story or photo with the community!'
-              : `@${profile.username} hasn't posted anything yet.`
+              ? 'Share your first story or photo with your community!'
+              : `@${profile.username} hasn't posted anything in this category.`
           }
         />
-      ) : activeTab === 'grid' ? (
-        /* Instagram 3-column photo / text grid */
+      ) : viewMode === 'grid' ? (
+        /* Instagram 3-column square grid */
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-          {posts.map((post) => (
+          {filteredPosts.map((post) => (
             <Link
               key={post._id}
               to={`/posts/${post._id}`}
@@ -290,12 +345,12 @@ const Profile = () => {
                 />
               ) : (
                 <div className="w-full h-full p-4 flex items-center justify-center text-center text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 group-hover:scale-105 transition-transform duration-300">
-                  <p className="line-clamp-4">{post.text}</p>
+                  <p className="line-clamp-4 leading-relaxed">{post.text}</p>
                 </div>
               )}
 
               {/* Hover overlay with likes and comment counts */}
-              <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-bold text-sm">
+              <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-bold text-sm">
                 <div className="flex items-center gap-1.5">
                   <Heart className="w-4 h-4 fill-white" />
                   <span>{post.likes?.length || 0}</span>
@@ -309,9 +364,9 @@ const Profile = () => {
           ))}
         </div>
       ) : (
-        /* Feed View */
-        <div className="max-w-2xl mx-auto space-y-4">
-          {posts.map((post) => (
+        /* Full Feed View */
+        <div className="space-y-4">
+          {filteredPosts.map((post) => (
             <PostCard
               key={post._id}
               post={post}
@@ -330,54 +385,38 @@ const Profile = () => {
       />
 
       {/* Followers / Following List Modal */}
-      {followModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
-                {followModal.title}
-              </h3>
-              <button
+      <Modal
+        isOpen={followModal.open}
+        onClose={() => setFollowModal({ open: false, title: '', users: [] })}
+        title={followModal.title}
+      >
+        <div className="max-h-72 overflow-y-auto space-y-3 pr-1">
+          {followModal.users.length === 0 ? (
+            <p className="text-center py-6 text-xs text-slate-400">
+              No {followModal.title.toLowerCase()} to display.
+            </p>
+          ) : (
+            followModal.users.map((u) => (
+              <Link
+                key={u._id}
+                to={`/profile/${u.username}`}
                 onClick={() => setFollowModal({ open: false, title: '', users: [] })}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
               >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="mt-3 max-h-72 overflow-y-auto space-y-3 pr-1">
-              {followModal.users.length === 0 ? (
-                <p className="text-center py-6 text-xs text-slate-400">
-                  No {followModal.title.toLowerCase()} yet.
-                </p>
-              ) : (
-                followModal.users.map((u) => (
-                  <Link
-                    key={u._id}
-                    to={`/profile/${u.username}`}
-                    onClick={() => setFollowModal({ open: false, title: '', users: [] })}
-                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
-                  >
-                    <img
-                      src={u.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.username}`}
-                      alt={u.username}
-                      className="w-9 h-9 rounded-full object-cover bg-slate-200 dark:bg-slate-700"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
-                        {u.username}
-                      </p>
-                      <p className="text-xs text-slate-400 truncate">
-                        {u.bio || 'ConnectSphere member'}
-                      </p>
-                    </div>
-                  </Link>
-                ))
-              )}
-            </div>
-          </div>
+                <Avatar src={u.avatar} name={u.username} size="sm" />
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-slate-800 dark:text-white truncate">
+                    {u.username}
+                  </p>
+                  <p className="text-xs text-slate-400 truncate">
+                    {u.bio || 'ConnectSphere member'}
+                  </p>
+                </div>
+              </Link>
+            ))
+          )}
         </div>
-      )}
+      </Modal>
     </div>
   );
 };
