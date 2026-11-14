@@ -75,10 +75,14 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
+const autoSeedIfEmpty = require('./utils/autoSeed');
 
 // Start server only when not running in test mode
 if (process.env.NODE_ENV !== 'test') {
-  connectDB().then(() => {
+  connectDB().then(async () => {
+    // Automatically seed demo data if collection is empty
+    await autoSeedIfEmpty();
+
     server.listen(PORT, () => {
       console.log(`🚀 ConnectSphere Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
     });
