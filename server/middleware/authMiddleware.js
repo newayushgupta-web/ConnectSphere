@@ -45,4 +45,35 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+// Optional auth: if token is present, decode and attach user; otherwise proceed
+const optionalAuth = async (req, res, next) => {
+  let token;
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || 'connectsphere_default_secret_key'
+    );
+    const user = await User.findById(decoded.id);
+    if (user) {
+      req.user = user;
+    }
+  } catch (err) {
+    // Ignore invalid token for optional auth routes
+  }
+
+  next();
+};
+
+module.exports = { protect, optionalAuth };
