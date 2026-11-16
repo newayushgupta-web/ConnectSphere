@@ -33,11 +33,15 @@ class UserService {
       username: user.username,
       email: user.email,
       avatar: user.avatar,
+      cover: user.cover,
       bio: user.bio,
+      location: user.location || '',
+      website: user.website || '',
       createdAt: user.createdAt,
       postCount,
       followersCount: user.followers.length,
       followingCount: user.following.length,
+      bookmarksCount: user.bookmarks ? user.bookmarks.length : 0,
       followers: user.followers,
       following: user.following,
       isFollowing,
@@ -48,7 +52,7 @@ class UserService {
   /**
    * Update current user profile
    */
-  static async updateProfile(userId, updateData, file = null) {
+  static async updateProfile(userId, updateData, files = null) {
     const user = await User.findById(userId);
     if (!user) {
       const error = new Error('User not found');
@@ -56,18 +60,61 @@ class UserService {
       throw error;
     }
 
-    if (updateData.bio !== undefined) {
-      user.bio = updateData.bio;
+    if (updateData.bio !== undefined) user.bio = updateData.bio;
+    if (updateData.location !== undefined) user.location = updateData.location;
+    if (updateData.website !== undefined) user.website = updateData.website;
+
+    // Handle file uploads (avatar and cover)
+    if (files) {
+      if (files.avatar && files.avatar[0]) {
+        user.avatar = `/uploads/${files.avatar[0].filename}`;
+      }
+      if (files.cover && files.cover[0]) {
+        user.cover = `/uploads/${files.cover[0].filename}`;
+      }
     }
 
-    if (file) {
-      user.avatar = `/uploads/${file.filename}`;
-    } else if (updateData.avatar) {
+    if (updateData.avatar && (!files || !files.avatar)) {
       user.avatar = updateData.avatar;
+    }
+    if (updateData.cover && (!files || !files.cover)) {
+      user.cover = updateData.cover;
     }
 
     await user.save();
     return user;
+  }
+
+  /**
+   * Get user followers list
+   */
+  static async getFollowers(userId) {
+    const user = await User.findById(userId).populate(
+      'followers',
+      'username avatar bio followers'
+    );
+    if (!user) {
+      const error = new Error('User not found');
+      error.statusCode = 404;
+      throw error;
+    }
+    return user.followers;
+  }
+
+  /**
+   * Get user following list
+   */
+  static async getFollowing(userId) {
+    const user = await User.findById(userId).populate(
+      'following',
+      'username avatar bio followers'
+    );
+    if (!user) {
+      const error = new Error('User not found');
+      error.statusCode = 404;
+      throw error;
+    }
+    return user.following;
   }
 
   /**
@@ -98,17 +145,14 @@ class UserService {
     let action = '';
 
     if (isFollowing) {
-      // Unfollow
       currentUser.following.pull(targetUserId);
       targetUser.followers.pull(currentUserId);
       action = 'unfollowed';
     } else {
-      // Follow
       currentUser.following.addToSet(targetUserId);
       targetUser.followers.addToSet(currentUserId);
       action = 'followed';
 
-      // Create & dispatch follow notification
       const notification = await Notification.create({
         recipient: targetUser._id,
         sender: currentUser._id,
@@ -117,10 +161,9 @@ class UserService {
 
       await notification.populate('sender', 'username avatar');
 
-      // Real-time socket alert
       emitToUser(targetUser._id, 'notification', {
         notification,
-        message: `${currentUser.username} started following you`,
+        message: `${currentUser.username} started following your sphere`,
       });
     }
 
@@ -151,14 +194,17 @@ class UserService {
     const users = await User.find({
       $or: [{ username: regex }, { bio: regex }],
     })
-      .select('username avatar bio followers following')
+      .select('username avatar cover bio location website followers following')
       .limit(20);
 
     return users.map((u) => ({
       _id: u._id,
       username: u.username,
       avatar: u.avatar,
+      cover: u.cover,
       bio: u.bio,
+      location: u.location,
+      website: u.website,
       followersCount: u.followers.length,
       followingCount: u.following.length,
       isFollowing: currentUserId
@@ -177,7 +223,7 @@ class UserService {
     const suggestions = await User.find({
       _id: { $nin: excludeIds },
     })
-      .select('username avatar bio followers following')
+      .select('username avatar bio location followers following')
       .limit(limit);
 
     return suggestions.map((u) => ({
@@ -185,6 +231,7 @@ class UserService {
       username: u.username,
       avatar: u.avatar,
       bio: u.bio,
+      location: u.location,
       followersCount: u.followers.length,
       followingCount: u.following.length,
       isFollowing: false,

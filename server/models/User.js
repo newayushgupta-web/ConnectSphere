@@ -36,13 +36,26 @@ const userSchema = new mongoose.Schema(
     avatar: {
       type: String,
       default: function () {
-        // Return a modern DiceBear avatar by default
         return `https://api.dicebear.com/7.x/bottts/svg?seed=${this.username || 'user'}`;
       },
+    },
+    cover: {
+      type: String,
+      default: null,
     },
     bio: {
       type: String,
       maxlength: [160, 'Bio cannot exceed 160 characters'],
+      default: '',
+    },
+    location: {
+      type: String,
+      maxlength: [60, 'Location cannot exceed 60 characters'],
+      default: '',
+    },
+    website: {
+      type: String,
+      maxlength: [100, 'Website cannot exceed 100 characters'],
       default: '',
     },
     followers: [
@@ -57,6 +70,20 @@ const userSchema = new mongoose.Schema(
         ref: 'User',
       },
     ],
+    bookmarks: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Post',
+      },
+    ],
+    resetPasswordToken: {
+      type: String,
+      select: false,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      select: false,
+    },
   },
   {
     timestamps: true,
@@ -64,6 +91,8 @@ const userSchema = new mongoose.Schema(
       virtuals: true,
       transform: function (doc, ret) {
         delete ret.passwordHash;
+        delete ret.resetPasswordToken;
+        delete ret.resetPasswordExpires;
         delete ret.__v;
         return ret;
       },
@@ -72,6 +101,8 @@ const userSchema = new mongoose.Schema(
       virtuals: true,
       transform: function (doc, ret) {
         delete ret.passwordHash;
+        delete ret.resetPasswordToken;
+        delete ret.resetPasswordExpires;
         delete ret.__v;
         return ret;
       },

@@ -18,10 +18,11 @@ const getProfile = asyncHandler(async (req, res) => {
 // @route   PUT /api/users/me
 // @access  Private
 const updateMe = asyncHandler(async (req, res) => {
+  const files = req.files || (req.file ? { avatar: [req.file] } : null);
   const updatedUser = await UserService.updateProfile(
     req.user._id,
     req.body,
-    req.file
+    files
   );
   return ApiResponse.success(res, { user: updatedUser }, 'Profile updated successfully');
 });
@@ -37,6 +38,24 @@ const toggleFollow = asyncHandler(async (req, res) => {
     result,
     `Successfully ${result.action} user`
   );
+});
+
+// @desc    Get user followers
+// @route   GET /api/users/:id/followers
+// @access  Public
+const getFollowers = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const followers = await UserService.getFollowers(id);
+  return ApiResponse.success(res, followers, 'Followers retrieved successfully');
+});
+
+// @desc    Get user following
+// @route   GET /api/users/:id/following
+// @access  Public
+const getFollowing = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const following = await UserService.getFollowing(id);
+  return ApiResponse.success(res, following, 'Following retrieved successfully');
 });
 
 // @desc    Search users by username or bio
@@ -65,7 +84,7 @@ const getUserPosts = asyncHandler(async (req, res) => {
   const user = await UserService.getProfileByUsername(username);
 
   const posts = await Post.find({ author: user._id })
-    .populate('author', 'username avatar')
+    .populate('author', 'username avatar bio')
     .sort({ createdAt: -1 });
 
   return ApiResponse.success(res, posts, 'User posts retrieved successfully');
@@ -75,6 +94,8 @@ module.exports = {
   getProfile,
   updateMe,
   toggleFollow,
+  getFollowers,
+  getFollowing,
   searchUsers,
   getSuggestions,
   getUserPosts,

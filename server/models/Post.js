@@ -18,6 +18,13 @@ const postSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    hashtags: [
+      {
+        type: String,
+        lowercase: true,
+        trim: true,
+      },
+    ],
     likes: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -35,10 +42,25 @@ const postSchema = new mongoose.Schema(
   }
 );
 
-// Index on createdAt for fast feed sorting
+// Indexes for fast queries
 postSchema.index({ createdAt: -1 });
-// Compound index for author's posts sorted by date
 postSchema.index({ author: 1, createdAt: -1 });
+postSchema.index({ hashtags: 1, createdAt: -1 });
+
+// Helper to extract hashtags from text
+postSchema.pre('save', function (next) {
+  if (this.isModified('text') && this.text) {
+    const matches = this.text.match(/#[a-zA-Z0-9_]+/g);
+    if (matches) {
+      this.hashtags = [
+        ...new Set(matches.map((tag) => tag.substring(1).toLowerCase())),
+      ];
+    } else {
+      this.hashtags = [];
+    }
+  }
+  next();
+});
 
 const Post = mongoose.model('Post', postSchema);
 

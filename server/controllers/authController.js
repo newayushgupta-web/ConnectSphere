@@ -41,8 +41,35 @@ const getMe = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, { user }, 'User profile retrieved successfully', 200);
 });
 
+// @desc    Request password reset token
+// @route   POST /api/auth/forgot-password
+// @access  Public (Rate limited: 5 / 15 min)
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const result = await AuthService.forgotPassword(email);
+  return ApiResponse.success(res, result, result.message, 200);
+});
+
+// @desc    Reset password using token
+// @route   POST /api/auth/reset-password/:token
+// @access  Public
+const resetPassword = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const { password, confirmPassword } = req.body;
+
+  const result = await AuthService.resetPassword(token, password, confirmPassword);
+  return ApiResponse.success(
+    res,
+    result,
+    'Your password has been successfully reset. You can now sign in with your new password.',
+    200
+  );
+});
+
 module.exports = {
   register,
   login,
   getMe,
+  forgotPassword,
+  resetPassword,
 };
