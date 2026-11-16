@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Heart, Send } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Heart, Send, Trash2, Plus } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 
-const StoryModal = ({ stories, initialIndex = 0, isOpen, onClose }) => {
+const StoryModal = ({
+  stories,
+  initialIndex = 0,
+  isOpen,
+  onClose,
+  onDeleteOwnStory,
+  onOpenCreateStory,
+}) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -43,7 +50,8 @@ const StoryModal = ({ stories, initialIndex = 0, isOpen, onClose }) => {
 
   if (!isOpen || !stories || stories.length === 0) return null;
 
-  const currentStory = stories[currentIndex];
+  const currentStory = stories[currentIndex] || stories[0];
+  const isOwnStory = Boolean(currentStory.isOwnStory);
 
   const handlePrev = (e) => {
     e.stopPropagation();
@@ -77,7 +85,7 @@ const StoryModal = ({ stories, initialIndex = 0, isOpen, onClose }) => {
       <button
         onClick={onClose}
         aria-label="Close story viewer"
-        className="absolute top-4 right-4 z-50 p-2.5 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-sm transition-colors"
+        className="absolute top-4 right-4 z-50 p-2.5 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-sm transition-colors"
       >
         <X className="w-5 h-5" />
       </button>
@@ -105,12 +113,16 @@ const StoryModal = ({ stories, initialIndex = 0, isOpen, onClose }) => {
 
       {/* Story Card Container */}
       <div className="relative w-full max-w-sm sm:max-w-md h-[85vh] max-h-[750px] rounded-3xl overflow-hidden shadow-2xl bg-slate-900 flex flex-col justify-between">
-        {/* Story Background Media */}
-        <img
-          src={currentStory.media}
-          alt={currentStory.caption || 'Story'}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+        {/* Story Background Media: Either Image OR Gradient */}
+        {currentStory.media ? (
+          <img
+            src={currentStory.media}
+            alt={currentStory.caption || 'Story'}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className={`absolute inset-0 ${currentStory.gradient || 'bg-gradient-brand'}`} />
+        )}
 
         {/* Gradient overlays for readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
@@ -146,12 +158,58 @@ const StoryModal = ({ stories, initialIndex = 0, isOpen, onClose }) => {
                 src={currentStory.user.avatar}
                 name={currentStory.user.username}
                 size="sm"
+                className="border border-white/80"
               />
               <div>
-                <span className="text-xs font-bold">{currentStory.user.username}</span>
-                <span className="text-[10px] text-white/70 ml-2">{currentStory.timeAgo || '2h ago'}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold">
+                    {isOwnStory ? 'Your story' : currentStory.user.username}
+                  </span>
+                  {isOwnStory && (
+                    <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full font-semibold">
+                      You
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-white/70">
+                  {currentStory.timeAgo || '2h ago'}
+                </span>
               </div>
             </div>
+
+            {/* Actions for own story: Delete or Add another */}
+            {isOwnStory && (
+              <div className="flex items-center gap-2">
+                {onOpenCreateStory && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClose();
+                      onOpenCreateStory();
+                    }}
+                    className="p-1.5 rounded-full bg-white/20 hover:bg-white/40 text-white transition-colors"
+                    title="Add new story"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                )}
+                {onDeleteOwnStory && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteOwnStory();
+                      onClose();
+                    }}
+                    className="p-1.5 rounded-full bg-rose-500/80 hover:bg-rose-600 text-white transition-colors"
+                    title="Delete your story"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -164,46 +222,55 @@ const StoryModal = ({ stories, initialIndex = 0, isOpen, onClose }) => {
         {/* Bottom Caption & Reply Bar */}
         <div className="relative z-20 p-4 space-y-3">
           {currentStory.caption && (
-            <p className="text-sm text-white font-medium drop-shadow-md">
+            <p className="text-sm text-white font-medium drop-shadow-md text-center bg-black/30 backdrop-blur-sm p-3 rounded-2xl border border-white/10">
               {currentStory.caption}
             </p>
           )}
 
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                placeholder={`Reply to ${currentStory.user.username}...`}
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && replyText.trim()) {
-                    setReplyText('');
-                  }
-                }}
-                className="w-full text-xs py-2.5 pl-3.5 pr-9 rounded-full bg-white/20 text-white placeholder-white/70 border border-white/20 focus:outline-none focus:ring-1 focus:ring-white/50 backdrop-blur-md"
-              />
+          {/* Reply and Like bar (only for others' stories) */}
+          {!isOwnStory ? (
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder={`Reply to ${currentStory.user.username}...`}
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && replyText.trim()) {
+                      setReplyText('');
+                    }
+                  }}
+                  className="w-full text-xs py-2.5 pl-3.5 pr-9 rounded-full bg-white/20 text-white placeholder-white/70 border border-white/20 focus:outline-none focus:ring-1 focus:ring-white/50 backdrop-blur-md"
+                />
+                <button
+                  type="button"
+                  onClick={() => setReplyText('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/70 hover:text-white"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
               <button
-                type="button"
-                onClick={() => setReplyText('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/70 hover:text-white"
+                onClick={() => setLiked((prev) => !prev)}
+                aria-label="Like story"
+                className="p-2.5 rounded-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-md transition-colors"
               >
-                <Send className="w-3.5 h-3.5" />
+                <Heart
+                  className={`w-4.5 h-4.5 transition-transform ${
+                    liked ? 'fill-rose-500 text-rose-500 scale-110' : ''
+                  }`}
+                />
               </button>
             </div>
-
-            <button
-              onClick={() => setLiked((prev) => !prev)}
-              aria-label="Like story"
-              className="p-2.5 rounded-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-md transition-colors"
-            >
-              <Heart
-                className={`w-4.5 h-4.5 transition-transform ${
-                  liked ? 'fill-rose-500 text-rose-500 scale-110' : ''
-                }`}
-              />
-            </button>
-          </div>
+          ) : (
+            <div className="text-center">
+              <span className="text-[11px] text-white/80 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full">
+                Seen by sphere creators • Active for 24h
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

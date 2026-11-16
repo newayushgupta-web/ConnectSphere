@@ -4,19 +4,18 @@ import RightSidebar from './RightSidebar';
 import TopHeader from './TopHeader';
 import MobileBottomBar from './MobileBottomBar';
 import EditProfileModal from '../user/EditProfileModal';
+import CreatePostModal from '../post/CreatePostModal';
 import { useAuth } from '../../context/AuthContext';
 
 const AppLayout = ({ children, onOpenCreatePost }) => {
   const { user, updateUser } = useAuth();
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
 
   const handleOpenCreate = () => {
+    setIsCreatePostOpen(true);
     if (onOpenCreatePost) {
       onOpenCreatePost();
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      const textarea = document.querySelector('textarea');
-      if (textarea) textarea.focus();
     }
   };
 
@@ -41,6 +40,12 @@ const AppLayout = ({ children, onOpenCreatePost }) => {
 
       {/* Mobile Bottom Navigation & FAB */}
       <MobileBottomBar onOpenCreatePost={handleOpenCreate} />
+
+      {/* Global Create Post Modal */}
+      <CreatePostModal
+        isOpen={isCreatePostOpen}
+        onClose={() => setIsCreatePostOpen(false)}
+      />
 
       {/* Global Edit Profile Modal */}
       {user && (

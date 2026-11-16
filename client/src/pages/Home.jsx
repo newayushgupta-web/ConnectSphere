@@ -51,6 +51,18 @@ const Home = () => {
     fetchFeed(1);
   }, [fetchFeed]);
 
+  useEffect(() => {
+    const handleGlobalPostCreated = (e) => {
+      if (e.detail) {
+        setPosts((prev) => [e.detail, ...prev]);
+      }
+    };
+    window.addEventListener('connectsphere:post-created', handleGlobalPostCreated);
+    return () => {
+      window.removeEventListener('connectsphere:post-created', handleGlobalPostCreated);
+    };
+  }, []);
+
   const handlePostCreated = (newPost) => {
     setPosts((prev) => [newPost, ...prev]);
   };

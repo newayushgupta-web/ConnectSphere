@@ -57,16 +57,6 @@ const PublicRoute = ({ children }) => {
 };
 
 function AppRoutes() {
-  const handleOpenCreatePost = () => {
-    if (window.location.pathname === '/') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      const textarea = document.querySelector('textarea');
-      if (textarea) textarea.focus();
-    } else {
-      window.location.href = '/';
-    }
-  };
-
   return (
     <Routes>
       {/* Auth Pages (Clean Split Screen without App Shell) */}
@@ -108,7 +98,7 @@ function AppRoutes() {
         path="/"
         element={
           <ProtectedRoute>
-            <AppLayout onOpenCreatePost={handleOpenCreatePost}>
+            <AppLayout>
               <Home />
             </AppLayout>
           </ProtectedRoute>
@@ -117,7 +107,7 @@ function AppRoutes() {
       <Route
         path="/profile/:username"
         element={
-          <AppLayout onOpenCreatePost={handleOpenCreatePost}>
+          <AppLayout>
             <Profile />
           </AppLayout>
         }
@@ -125,7 +115,7 @@ function AppRoutes() {
       <Route
         path="/posts/:id"
         element={
-          <AppLayout onOpenCreatePost={handleOpenCreatePost}>
+          <AppLayout>
             <PostDetail />
           </AppLayout>
         }
@@ -134,7 +124,7 @@ function AppRoutes() {
         path="/search"
         element={
           <ProtectedRoute>
-            <AppLayout onOpenCreatePost={handleOpenCreatePost}>
+            <AppLayout>
               <Search />
             </AppLayout>
           </ProtectedRoute>
@@ -144,7 +134,7 @@ function AppRoutes() {
         path="/notifications"
         element={
           <ProtectedRoute>
-            <AppLayout onOpenCreatePost={handleOpenCreatePost}>
+            <AppLayout>
               <Notifications />
             </AppLayout>
           </ProtectedRoute>
@@ -153,7 +143,7 @@ function AppRoutes() {
       <Route
         path="*"
         element={
-          <AppLayout onOpenCreatePost={handleOpenCreatePost}>
+          <AppLayout>
             <NotFound />
           </AppLayout>
         }
