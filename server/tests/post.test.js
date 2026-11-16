@@ -184,4 +184,65 @@ describe('Posts & Interactions API Endpoints', () => {
       expect(res.body.success).toBe(false);
     });
   });
+
+  describe('Bookmarks & Hashtags API', () => {
+    it('should extract hashtags automatically when post is created', async () => {
+      const res = await request(app)
+        .post('/api/posts')
+        .set('Authorization', `Bearer ${userToken1}`)
+        .send({ text: 'Loving #React and #NodeJS development!' });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.data.hashtags).toContain('react');
+      expect(res.body.data.hashtags).toContain('nodejs');
+    });
+
+    it('should toggle bookmark on a post and retrieve it from bookmarks endpoint', async () => {
+      const post = await Post.create({
+        author: userId1,
+        text: 'Post to save',
+      });
+
+      // Bookmark post
+      const bRes = await request(app)
+        .put(`/api/posts/${post._id}/bookmark`)
+        .set('Authorization', `Bearer ${userToken2}`);
+
+      expect(bRes.statusCode).toBe(200);
+      expect(bRes.body.data.isBookmarked).toBe(true);
+
+      // Verify in getBookmarks
+      const listRes = await request(app)
+        .get('/api/posts/bookmarks')
+        .set('Authorization', `Bearer ${userToken2}`);
+
+      expect(listRes.statusCode).toBe(200);
+      expect(listRes.body.data.length).toBe(1);
+      expect(listRes.body.data[0]._id).toBe(post._id.toString());
+      expect(listRes.body.data[0].isBookmarked).toBe(true);
+
+      // Unbookmark post
+      const unRes = await request(app)
+        .put(`/api/posts/${post._id}/bookmark`)
+        .set('Authorization', `Bearer ${userToken2}`);
+
+      expect(unRes.statusCode).toBe(200);
+      expect(unRes.body.data.isBookmarked).toBe(false);
+    });
+
+    it('should retrieve trending hashtags', async () => {
+      await Post.create([
+        { author: userId1, text: 'Hello #innovation #tech' },
+        { author: userId2, text: 'Another #tech post' },
+      ]);
+
+      const res = await request(app).get('/api/posts/hashtags/trending');
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      const techTag = res.body.data.find((t) => t.tag === 'tech');
+      expect(techTag).toBeDefined();
+      expect(techTag.count).toBe(2);
+    });
+  });
 });

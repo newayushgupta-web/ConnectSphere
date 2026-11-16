@@ -9,6 +9,7 @@ import {
   LogOut,
   User,
   Settings,
+  Bookmark,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
@@ -136,6 +137,15 @@ const TopHeader = ({ onOpenEditProfile }) => {
                       >
                         <User className="w-4 h-4 text-slate-400" />
                         <span>View Profile</span>
+                      </Link>
+
+                      <Link
+                        to={`/profile/${user?.username}?tab=saved`}
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+                      >
+                        <Bookmark className="w-4 h-4 text-slate-400" />
+                        <span>Saved Posts</span>
                       </Link>
 
                       {onOpenEditProfile && (

@@ -156,7 +156,7 @@ class AuthService {
       throw error;
     }
 
-    if (password !== confirmPassword) {
+    if (confirmPassword && password !== confirmPassword) {
       const error = new Error('Passwords do not match');
       error.statusCode = 400;
       throw error;

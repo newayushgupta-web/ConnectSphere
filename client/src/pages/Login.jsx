@@ -117,6 +117,14 @@ const Login = () => {
 
         <Input
           label="Password"
+          labelRight={
+            <Link
+              to="/forgot-password"
+              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          }
           id="password"
           name="password"
           type="password"

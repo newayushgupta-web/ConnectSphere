@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import {
   Grid,
   List,
@@ -10,7 +10,9 @@ import {
   Heart,
   MessageCircle,
   X,
-  Sparkles,
+  Bookmark,
+  MapPin,
+  Globe,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import api from '../services/api';
@@ -26,16 +28,21 @@ import Modal from '../components/ui/Modal';
 
 const Profile = () => {
   const { username } = useParams();
+  const [searchParams] = useSearchParams();
   const { user: currentUser, isAuthenticated } = useAuth();
   const { showToast } = useToast();
 
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
+  const [savedPosts, setSavedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingSaved, setLoadingSaved] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'feed'
-  const [activeTab, setActiveTab] = useState('posts'); // 'posts' | 'media'
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get('tab') === 'saved' ? 'saved' : 'posts'
+  ); // 'posts' | 'media' | 'saved'
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [followModal, setFollowModal] = useState({ open: false, title: '', users: [] });
+  const [followModal, setFollowModal] = useState({ open: false, title: '', users: [], loading: false });
   const [isHoveringFollow, setIsHoveringFollow] = useState(false);
 
   useEffect(() => {
@@ -62,11 +69,33 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
-  }, [username]);
+  }, [username, showToast]);
 
   useEffect(() => {
     fetchProfileAndPosts();
   }, [fetchProfileAndPosts]);
+
+  const isSelf = currentUser && profile && currentUser.username === profile.username;
+
+  // Fetch saved bookmarks when Saved tab is selected
+  useEffect(() => {
+    if (activeTab === 'saved' && isSelf && savedPosts.length === 0) {
+      const fetchBookmarks = async () => {
+        setLoadingSaved(true);
+        try {
+          const res = await api.get('/posts/bookmarks');
+          if (res.data.success) {
+            setSavedPosts(res.data.data);
+          }
+        } catch (err) {
+          console.error('Failed to load bookmarks:', err);
+        } finally {
+          setLoadingSaved(false);
+        }
+      };
+      fetchBookmarks();
+    }
+  }, [activeTab, isSelf, savedPosts.length]);
 
   const handleFollowToggle = async () => {
     if (!isAuthenticated) {
@@ -93,16 +122,40 @@ const Profile = () => {
     }
   };
 
+  const openFollowModal = async (type) => {
+    setFollowModal({
+      open: true,
+      title: type === 'followers' ? 'Followers' : 'Following',
+      users: [],
+      loading: true,
+    });
+
+    try {
+      const res = await api.get(`/users/${profile._id}/${type}`);
+      if (res.data.success) {
+        setFollowModal({
+          open: true,
+          title: type === 'followers' ? 'Followers' : 'Following',
+          users: res.data.data,
+          loading: false,
+        });
+      }
+    } catch (err) {
+      setFollowModal((prev) => ({ ...prev, loading: false }));
+      showToast(`Failed to load ${type}`, 'error');
+    }
+  };
+
   const handleProfileUpdated = (updatedUser) => {
     setProfile((prev) => ({
       ...prev,
-      bio: updatedUser.bio,
-      avatar: updatedUser.avatar,
+      ...updatedUser,
     }));
   };
 
   const handlePostDeleted = (deletedId) => {
     setPosts((prev) => prev.filter((p) => p._id !== deletedId));
+    setSavedPosts((prev) => prev.filter((p) => p._id !== deletedId));
     setProfile((prev) => ({ ...prev, postCount: Math.max(0, prev.postCount - 1) }));
   };
 
@@ -128,17 +181,28 @@ const Profile = () => {
     );
   }
 
-  const isSelf = currentUser && currentUser.username === profile.username;
-  const filteredPosts =
-    activeTab === 'media' ? posts.filter((p) => !!p.image) : posts;
+  let displayedPosts = posts;
+  if (activeTab === 'media') {
+    displayedPosts = posts.filter((p) => !!p.image);
+  } else if (activeTab === 'saved') {
+    displayedPosts = savedPosts;
+  }
 
   return (
     <div className="w-full">
       {/* Profile Header Card */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-soft mb-6">
-        {/* Modern Cover Banner */}
-        <div className="relative h-36 sm:h-48 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 overflow-hidden">
-          <div className="absolute inset-0 bg-mesh opacity-30" />
+        {/* Cover Banner */}
+        <div className="relative h-36 sm:h-52 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 overflow-hidden">
+          {profile.cover ? (
+            <img
+              src={profile.cover}
+              alt={`${profile.username}'s cover`}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-mesh opacity-30" />
+          )}
         </div>
 
         <div className="px-6 sm:px-8 pb-6 sm:pb-8 pt-0 relative">
@@ -212,11 +276,35 @@ const Profile = () => {
               </p>
             )}
 
-            <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-slate-400 pt-1">
-              <Calendar className="w-3.5 h-3.5" />
-              <span>
-                Joined {profile.createdAt ? format(new Date(profile.createdAt), 'MMMM yyyy') : 'recently'}
-              </span>
+            {/* Profile Meta info (Joined, Location, Website) */}
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-xs text-slate-400 pt-1">
+              <div className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>
+                  Joined {profile.createdAt ? format(new Date(profile.createdAt), 'MMMM yyyy') : 'recently'}
+                </span>
+              </div>
+
+              {profile.location && (
+                <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                  <span>{profile.location}</span>
+                </div>
+              )}
+
+              {profile.website && (
+                <div className="flex items-center gap-1">
+                  <Globe className="w-3.5 h-3.5 text-slate-400" />
+                  <a
+                    href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                  >
+                    {profile.website.replace(/^https?:\/\//, '')}
+                  </a>
+                </div>
+              )}
             </div>
           </div>
 
@@ -230,13 +318,7 @@ const Profile = () => {
             </div>
 
             <button
-              onClick={() =>
-                setFollowModal({
-                  open: true,
-                  title: 'Followers',
-                  users: profile.followers || [],
-                })
-              }
+              onClick={() => openFollowModal('followers')}
               className="text-center sm:text-left hover:opacity-80 transition-opacity"
             >
               <span className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white mr-1.5">
@@ -246,13 +328,7 @@ const Profile = () => {
             </button>
 
             <button
-              onClick={() =>
-                setFollowModal({
-                  open: true,
-                  title: 'Following',
-                  users: profile.following || [],
-                })
-              }
+              onClick={() => openFollowModal('following')}
               className="text-center sm:text-left hover:opacity-80 transition-opacity"
             >
               <span className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white mr-1.5">
@@ -289,6 +365,20 @@ const Profile = () => {
           >
             Photos ({posts.filter((p) => !!p.image).length})
           </button>
+
+          {isSelf && (
+            <button
+              onClick={() => setActiveTab('saved')}
+              className={`pb-3 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-1.5 ${
+                activeTab === 'saved'
+                  ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+              }`}
+            >
+              <Bookmark className="w-3.5 h-3.5" />
+              <span>Saved</span>
+            </button>
+          )}
         </div>
 
         {/* View Mode Toggle (Grid vs Feed) */}
@@ -319,11 +409,24 @@ const Profile = () => {
       </div>
 
       {/* Tab Content */}
-      {filteredPosts.length === 0 ? (
+      {loadingSaved && activeTab === 'saved' ? (
+        <div className="space-y-4">
+          <SkeletonPost />
+          <SkeletonPost />
+        </div>
+      ) : displayedPosts.length === 0 ? (
         <EmptyState
-          title={activeTab === 'media' ? 'No photos yet' : 'No posts yet'}
+          title={
+            activeTab === 'saved'
+              ? 'No saved posts'
+              : activeTab === 'media'
+              ? 'No photos yet'
+              : 'No posts yet'
+          }
           description={
-            isSelf
+            activeTab === 'saved'
+              ? 'Save inspiring posts using the bookmark icon on any post!'
+              : isSelf
               ? 'Share your first story or photo with your community!'
               : `@${profile.username} hasn't posted anything in this category.`
           }
@@ -331,7 +434,7 @@ const Profile = () => {
       ) : viewMode === 'grid' ? (
         /* Instagram 3-column square grid */
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-          {filteredPosts.map((post) => (
+          {displayedPosts.map((post) => (
             <Link
               key={post._id}
               to={`/posts/${post._id}`}
@@ -366,7 +469,7 @@ const Profile = () => {
       ) : (
         /* Full Feed View */
         <div className="space-y-4">
-          {filteredPosts.map((post) => (
+          {displayedPosts.map((post) => (
             <PostCard
               key={post._id}
               post={post}
@@ -387,11 +490,15 @@ const Profile = () => {
       {/* Followers / Following List Modal */}
       <Modal
         isOpen={followModal.open}
-        onClose={() => setFollowModal({ open: false, title: '', users: [] })}
+        onClose={() => setFollowModal({ open: false, title: '', users: [], loading: false })}
         title={followModal.title}
       >
         <div className="max-h-72 overflow-y-auto space-y-3 pr-1">
-          {followModal.users.length === 0 ? (
+          {followModal.loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-7 h-7 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : followModal.users.length === 0 ? (
             <p className="text-center py-6 text-xs text-slate-400">
               No {followModal.title.toLowerCase()} to display.
             </p>
@@ -400,7 +507,7 @@ const Profile = () => {
               <Link
                 key={u._id}
                 to={`/profile/${u.username}`}
-                onClick={() => setFollowModal({ open: false, title: '', users: [] })}
+                onClick={() => setFollowModal({ open: false, title: '', users: [], loading: false })}
                 className="flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
               >
                 <Avatar src={u.avatar} name={u.username} size="sm" />

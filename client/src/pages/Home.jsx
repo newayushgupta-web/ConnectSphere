@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
+import StoriesRow from '../components/feed/StoriesRow';
 import PostComposer from '../components/post/PostComposer';
 import PostCard from '../components/post/PostCard';
 import { SkeletonPost } from '../components/ui/Skeleton';
@@ -81,6 +82,9 @@ const Home = () => {
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
+
+      {/* Stories Carousel Row */}
+      <StoriesRow />
 
       {/* Post Composer */}
       <PostComposer onPostCreated={handlePostCreated} />

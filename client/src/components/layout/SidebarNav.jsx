@@ -4,6 +4,7 @@ import {
   Home,
   Compass,
   Bell,
+  Bookmark,
   User,
   PlusCircle,
   Sparkles,
@@ -31,6 +32,11 @@ const SidebarNav = ({ onOpenCreatePost }) => {
       path: '/notifications',
       icon: Bell,
       badge: unreadNotificationsCount,
+    },
+    {
+      label: 'Bookmarks',
+      path: `/profile/${user?.username || ''}?tab=saved`,
+      icon: Bookmark,
     },
     {
       label: 'Profile',

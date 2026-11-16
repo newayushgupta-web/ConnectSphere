@@ -144,4 +144,73 @@ describe('Authentication API Endpoints', () => {
       expect(res.body.success).toBe(false);
     });
   });
+
+  describe('POST /api/auth/forgot-password & reset-password', () => {
+    it('should handle forgot password and return generic success response', async () => {
+      await request(app).post('/api/auth/register').send({
+        username: 'resetuser',
+        email: 'reset@example.com',
+        password: 'oldpassword123',
+      });
+
+      const forgotRes = await request(app).post('/api/auth/forgot-password').send({
+        email: 'reset@example.com',
+      });
+
+      expect(forgotRes.statusCode).toBe(200);
+      expect(forgotRes.body.success).toBe(true);
+      expect(forgotRes.body.message).toMatch(/an account with that email exists/i);
+
+      // Verify token set on user
+      const user = await User.findOne({ email: 'reset@example.com' }).select(
+        '+resetPasswordToken +resetPasswordExpires'
+      );
+      expect(user.resetPasswordToken).toBeDefined();
+      expect(user.resetPasswordExpires).toBeDefined();
+    });
+
+    it('should reset password with valid token and allow subsequent login', async () => {
+      const crypto = require('crypto');
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const hashed = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+      await User.create({
+        username: 'directreset',
+        email: 'direct@example.com',
+        passwordHash: '$2b$10$abcdefghijklmnopqrstuvwxyz123456',
+        resetPasswordToken: hashed,
+        resetPasswordExpires: new Date(Date.now() + 15 * 60 * 1000),
+      });
+
+      const resetRes = await request(app)
+        .post(`/api/auth/reset-password/${rawToken}`)
+        .send({ password: 'newbrandpassword123' });
+
+      expect(resetRes.statusCode).toBe(200);
+      expect(resetRes.body.success).toBe(true);
+      expect(resetRes.body.message).toMatch(/successfully/i);
+
+      // Verify token cleared
+      const updated = await User.findOne({ email: 'direct@example.com' });
+      expect(updated.resetPasswordToken).toBeUndefined();
+
+      // Test login with new password
+      const loginRes = await request(app).post('/api/auth/login').send({
+        loginIdentifier: 'direct@example.com',
+        password: 'newbrandpassword123',
+      });
+      expect(loginRes.statusCode).toBe(200);
+      expect(loginRes.body.success).toBe(true);
+    });
+
+    it('should reject reset password with expired or invalid token', async () => {
+      const res = await request(app)
+        .post('/api/auth/reset-password/invalidtoken123456789')
+        .send({ password: 'somepassword123' });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toMatch(/invalid or expired/i);
+    });
+  });
 });

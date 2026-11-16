@@ -24,6 +24,7 @@ const router = express.Router();
 router.get('/feed', protect, getFeed);
 router.get('/bookmarks', protect, getBookmarks);
 router.get('/trending', getTrending);
+router.get('/hashtags/trending', getTrending);
 router.get('/hashtag/:tag', optionalAuth, getByHashtag);
 
 // Post CRUD

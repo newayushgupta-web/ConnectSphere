@@ -9,9 +9,17 @@ import {
   Sun,
   Moon,
   Layers,
+  Star,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import Avatar from '../ui/Avatar';
+
+const creatorAvatars = [
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+  'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80',
+];
 
 const AuthLayout = ({ children, title, subtitle }) => {
   const { theme, toggleTheme } = useTheme();
@@ -24,7 +32,7 @@ const AuthLayout = ({ children, title, subtitle }) => {
           onClick={toggleTheme}
           aria-label="Toggle theme"
           title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-          className="p-2.5 rounded-full glass-panel shadow-sm text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:scale-105 active:scale-95 transition-all"
+          className="p-2.5 rounded-full glass-panel shadow-sm text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:scale-105 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
         >
           {theme === 'dark' ? (
             <Sun className="w-5 h-5 text-amber-400" />
@@ -52,8 +60,8 @@ const AuthLayout = ({ children, title, subtitle }) => {
           </Link>
         </div>
 
-        {/* Center: Tagline & 3 Feature Highlights */}
-        <div className="relative z-10 max-w-lg space-y-8 my-auto py-10">
+        {/* Center: Tagline, Highlights & Creator Social Proof */}
+        <div className="relative z-10 max-w-lg space-y-7 my-auto py-8">
           <div>
             <h1 className="text-4xl xl:text-5xl font-black text-white tracking-tight leading-tight">
               Share moments.{' '}
@@ -61,53 +69,76 @@ const AuthLayout = ({ children, title, subtitle }) => {
                 Build connections.
               </span>
             </h1>
-            <p className="text-base text-slate-300 mt-4 leading-relaxed">
+            <p className="text-sm xl:text-base text-slate-300 mt-3 leading-relaxed">
               A modern, decentralized-inspired social platform designed for authentic creator interactions, chronological feeds, and real-time community engagement.
             </p>
           </div>
 
+          {/* Social Proof: Avatar Stack */}
+          <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md w-fit">
+            <div className="flex -space-x-2.5 overflow-hidden">
+              {creatorAvatars.map((src, i) => (
+                <img
+                  key={i}
+                  src={src}
+                  alt={`Creator ${i + 1}`}
+                  className="inline-block h-8 w-8 rounded-full ring-2 ring-indigo-900 object-cover"
+                />
+              ))}
+            </div>
+            <div className="text-xs">
+              <div className="flex items-center gap-1 text-amber-300 font-bold">
+                <Star className="w-3 h-3 fill-amber-300" />
+                <span>4.9 / 5 rating</span>
+              </div>
+              <p className="text-slate-300 text-[11px] font-medium">
+                Join <strong className="text-white">10,000+ creators</strong> on ConnectSphere
+              </p>
+            </div>
+          </div>
+
           {/* 3 Feature Highlights */}
-          <div className="space-y-4 pt-2">
-            <div className="flex items-start gap-4 p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center flex-shrink-0">
-                <Zap className="w-5 h-5" />
+          <div className="space-y-3.5">
+            <div className="flex items-start gap-3.5 p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center flex-shrink-0">
+                <Zap className="w-4.5 h-4.5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white">Real-Time Community</h4>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Real-Time Community</h4>
                 <p className="text-xs text-slate-300 mt-0.5">
                   Instant live notifications, optimistic heart reactions, and threaded discussions.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-4 p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-              <div className="w-10 h-10 rounded-xl bg-violet-500/20 text-violet-300 flex items-center justify-center flex-shrink-0">
-                <Layers className="w-5 h-5" />
+            <div className="flex items-start gap-3.5 p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+              <div className="w-9 h-9 rounded-xl bg-violet-500/20 text-violet-300 flex items-center justify-center flex-shrink-0">
+                <Layers className="w-4.5 h-4.5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white">Clean & Chronological</h4>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Clean & Chronological</h4>
                 <p className="text-xs text-slate-300 mt-0.5">
                   Distraction-free feeds featuring posts from creators you follow, newest first.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-4 p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center flex-shrink-0">
-                <ShieldCheck className="w-5 h-5" />
+            <div className="flex items-start gap-3.5 p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center flex-shrink-0">
+                <ShieldCheck className="w-4.5 h-4.5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white">Privacy & Security First</h4>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Privacy & Security First</h4>
                 <p className="text-xs text-slate-300 mt-0.5">
-                  JWT protected authentication, zero data harvesting, and full content ownership.
+                  JWT protected auth, secure password reset, and full content ownership.
                 </p>
               </div>
             </div>
           </div>
 
           {/* Floating Mock Post Card */}
-          <div className="pt-2">
-            <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl space-y-3 transform hover:-translate-y-1 transition-transform duration-300">
+          <div className="pt-1">
+            <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl space-y-2.5 transform hover:-translate-y-1 transition-transform duration-300">
               <div className="flex items-center gap-3">
                 <Avatar
                   name="Maya Designer"
@@ -120,7 +151,7 @@ const AuthLayout = ({ children, title, subtitle }) => {
                 </div>
               </div>
               <p className="text-xs text-slate-200 leading-relaxed">
-                Exploring micro-interactions and smooth transitions on the new ConnectSphere update. What do you think of this aesthetic? ✨🚀
+                Exploring micro-interactions and smooth transitions on the new ConnectSphere update. What do you think of this aesthetic? ✨🚀 #UIUX #FullStack
               </p>
               <div className="flex items-center gap-4 pt-1 text-[11px] text-slate-300 font-medium">
                 <span className="flex items-center gap-1 text-rose-400">

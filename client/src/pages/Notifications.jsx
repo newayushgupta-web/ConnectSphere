@@ -65,6 +65,73 @@ const Notifications = () => {
     }
   };
 
+  const renderNotificationItem = (n) => {
+    const targetUrl =
+      n.type === 'follow'
+        ? `/profile/${n.sender?.username}`
+        : `/posts/${n.post?._id || n.post}`;
+
+    return (
+      <Link
+        key={n._id}
+        to={targetUrl}
+        className={`flex items-start gap-3.5 p-3.5 sm:p-4 rounded-2xl transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50 ${
+          !n.isRead ? 'bg-indigo-50/40 dark:bg-indigo-950/20' : ''
+        }`}
+      >
+        {/* Sender Avatar with type icon overlay */}
+        <div className="relative flex-shrink-0">
+          <Avatar
+            src={n.sender?.avatar}
+            name={n.sender?.username}
+            size="md"
+          />
+          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center border border-slate-100 dark:border-slate-800">
+            {getNotificationIcon(n.type)}
+          </div>
+        </div>
+
+        {/* Message & Details */}
+        <div className="flex-1 min-w-0">
+          <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-snug">
+            <strong className="font-bold text-slate-900 dark:text-white">
+              {n.sender?.username}
+            </strong>{' '}
+            {n.type === 'like' && 'liked your post'}
+            {n.type === 'comment' && 'commented on your post'}
+            {n.type === 'follow' && 'started following your sphere'}
+          </p>
+
+          {n.post && n.post.text && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-1 italic">
+              &quot;{n.post.text}&quot;
+            </p>
+          )}
+
+          <span className="text-[10px] text-slate-400 mt-1.5 block">
+            {n.createdAt
+              ? formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })
+              : ''}
+          </span>
+        </div>
+
+        {/* Unread indicator */}
+        {!n.isRead && (
+          <span className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400 flex-shrink-0 self-center" />
+        )}
+      </Link>
+    );
+  };
+
+  const now = new Date();
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const todayNotifications = notifications.filter(
+    (n) => now - new Date(n.createdAt) < ONE_DAY_MS
+  );
+  const earlierNotifications = notifications.filter(
+    (n) => now - new Date(n.createdAt) >= ONE_DAY_MS
+  );
+
   return (
     <div className="w-full">
       {/* Header */}
@@ -110,65 +177,31 @@ const Notifications = () => {
           description="When members follow you, like your posts, or drop comments, they'll appear right here."
         />
       ) : (
-        <Card padding="p-1 sm:p-2" className="divide-y divide-slate-100 dark:divide-slate-800">
-          {notifications.map((n) => {
-            const targetUrl =
-              n.type === 'follow'
-                ? `/profile/${n.sender?.username}`
-                : `/posts/${n.post?._id || n.post}`;
+        <div className="space-y-6">
+          {/* Today Group */}
+          {todayNotifications.length > 0 && (
+            <div className="space-y-2">
+              <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 px-1 uppercase tracking-wider">
+                Today
+              </h2>
+              <Card padding="p-1 sm:p-2" className="divide-y divide-slate-100 dark:divide-slate-800">
+                {todayNotifications.map(renderNotificationItem)}
+              </Card>
+            </div>
+          )}
 
-            return (
-              <Link
-                key={n._id}
-                to={targetUrl}
-                className={`flex items-start gap-3.5 p-3.5 sm:p-4 rounded-2xl transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50 ${
-                  !n.isRead ? 'bg-indigo-50/40 dark:bg-indigo-950/20' : ''
-                }`}
-              >
-                {/* Sender Avatar with type icon overlay */}
-                <div className="relative flex-shrink-0">
-                  <Avatar
-                    src={n.sender?.avatar}
-                    name={n.sender?.username}
-                    size="md"
-                  />
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center border border-slate-100 dark:border-slate-800">
-                    {getNotificationIcon(n.type)}
-                  </div>
-                </div>
-
-                {/* Message & Details */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-snug">
-                    <strong className="font-bold text-slate-900 dark:text-white">
-                      {n.sender?.username}
-                    </strong>{' '}
-                    {n.type === 'like' && 'liked your post'}
-                    {n.type === 'comment' && 'commented on your post'}
-                    {n.type === 'follow' && 'started following your sphere'}
-                  </p>
-
-                  {n.post && n.post.text && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-1 italic">
-                      "{n.post.text}"
-                    </p>
-                  )}
-
-                  <span className="text-[10px] text-slate-400 mt-1.5 block">
-                    {n.createdAt
-                      ? formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })
-                      : ''}
-                  </span>
-                </div>
-
-                {/* Unread indicator */}
-                {!n.isRead && (
-                  <span className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400 flex-shrink-0 self-center" />
-                )}
-              </Link>
-            );
-          })}
-        </Card>
+          {/* Earlier Group */}
+          {earlierNotifications.length > 0 && (
+            <div className="space-y-2">
+              <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 px-1 uppercase tracking-wider">
+                Earlier
+              </h2>
+              <Card padding="p-1 sm:p-2" className="divide-y divide-slate-100 dark:divide-slate-800">
+                {earlierNotifications.map(renderNotificationItem)}
+              </Card>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

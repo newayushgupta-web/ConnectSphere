@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Heart,
   MessageCircle,
   Share2,
+  Bookmark,
   MoreHorizontal,
   Edit3,
   Trash2,
@@ -20,7 +21,7 @@ import ImageLightbox from './ImageLightbox';
 import FormattedText from './FormattedText';
 
 const PostCard = ({ post: initialPost, onPostDeleted }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, updateUser } = useAuth();
   const { showToast } = useToast();
 
   const [post, setPost] = useState(initialPost);
@@ -38,12 +39,22 @@ const PostCard = ({ post: initialPost, onPostDeleted }) => {
   const [commentsCount, setCommentsCount] = useState(
     post.commentsCount !== undefined ? post.commentsCount : 0
   );
+  const [isBookmarked, setIsBookmarked] = useState(() => {
+    if (!user) return false;
+    return (
+      post.isBookmarked ||
+      (user.bookmarks &&
+        user.bookmarks.some((b) => (b._id || b).toString() === post._id.toString()))
+    );
+  });
 
   const [showComments, setShowComments] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
+  const [showHeartBurst, setShowHeartBurst] = useState(false);
+  const lastTapRef = useRef(0);
 
   const isOwner = user && (post.author?._id || post.author) === user._id;
 
@@ -75,6 +86,48 @@ const PostCard = ({ post: initialPost, onPostDeleted }) => {
     } finally {
       setIsLiking(false);
     }
+  };
+
+  const handleBookmarkToggle = async () => {
+    if (!isAuthenticated) {
+      showToast('Please sign in to bookmark posts', 'info');
+      return;
+    }
+
+    const nextBookmarked = !isBookmarked;
+    setIsBookmarked(nextBookmarked);
+    showToast(nextBookmarked ? 'Saved to bookmarks' : 'Removed from bookmarks', 'success');
+
+    try {
+      const res = await api.put(`/posts/${post._id}/bookmark`);
+      if (res.data.success) {
+        setIsBookmarked(res.data.data.isBookmarked);
+        if (updateUser && user) {
+          const currentBookmarks = user.bookmarks || [];
+          const updated = res.data.data.isBookmarked
+            ? [...currentBookmarks, post._id]
+            : currentBookmarks.filter((id) => (id._id || id).toString() !== post._id.toString());
+          updateUser({ bookmarks: updated });
+        }
+      }
+    } catch (err) {
+      setIsBookmarked(!nextBookmarked);
+      showToast('Failed to update bookmark', 'error');
+    }
+  };
+
+  const handleImageTap = () => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      // Double tap detected
+      if (!isLiked) {
+        handleLikeToggle();
+      }
+      setShowHeartBurst(true);
+      setTimeout(() => setShowHeartBurst(false), 800);
+    }
+    lastTapRef.current = now;
   };
 
   const handleDeletePost = async () => {
@@ -185,18 +238,31 @@ const PostCard = ({ post: initialPost, onPostDeleted }) => {
         </Link>
       </div>
 
-      {/* Post Image with Lightbox Preview */}
+      {/* Post Image with Lightbox Preview and Double-tap Like */}
       {post.image && (
-        <div className="relative mb-4 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 group/image cursor-pointer">
+        <div
+          className="relative mb-4 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 group/image cursor-pointer select-none"
+          onClick={handleImageTap}
+        >
           <img
             src={post.image}
             alt="Post media"
             loading="lazy"
-            onClick={() => setIsLightboxOpen(true)}
             className="w-full max-h-[480px] object-cover group-hover/image:scale-[1.01] transition-transform duration-300"
           />
+
+          {/* Floating Double-Tap Heart Burst */}
+          {showHeartBurst && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 animate-in zoom-in-50 duration-200">
+              <Heart className="w-20 h-20 fill-rose-500 text-rose-500 drop-shadow-2xl animate-heart" />
+            </div>
+          )}
+
           <button
-            onClick={() => setIsLightboxOpen(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsLightboxOpen(true);
+            }}
             aria-label="View full size image"
             className="absolute bottom-3 right-3 p-2 rounded-xl bg-slate-900/60 hover:bg-slate-900 text-white backdrop-blur-md opacity-0 group-hover/image:opacity-100 transition-opacity"
           >
@@ -237,15 +303,39 @@ const PostCard = ({ post: initialPost, onPostDeleted }) => {
           </button>
         </div>
 
-        {/* Share Button */}
-        <button
-          onClick={handleShare}
-          aria-label="Share post link"
-          className="p-2 rounded-full hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30 transition-colors"
-        >
-          <Share2 className="w-4 h-4" />
-        </button>
+        {/* Right Actions: Bookmark & Share */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleBookmarkToggle}
+            aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark post'}
+            className={`p-2 rounded-full transition-colors ${
+              isBookmarked
+                ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50/60 dark:bg-indigo-950/30'
+                : 'hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30'
+            }`}
+          >
+            <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+          </button>
+
+          <button
+            onClick={handleShare}
+            aria-label="Share post link"
+            className="p-2 rounded-full hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30 transition-colors"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
+
+      {/* Preview Comments Trigger */}
+      {commentsCount > 0 && !showComments && (
+        <button
+          onClick={() => setShowComments(true)}
+          className="mt-2.5 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium transition-colors block text-left"
+        >
+          View all {commentsCount} {commentsCount === 1 ? 'comment' : 'comments'}
+        </button>
+      )}
 
       {/* Embedded Comments Section */}
       {showComments && (

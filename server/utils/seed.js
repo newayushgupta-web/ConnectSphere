@@ -14,6 +14,9 @@ const demoUsers = [
     email: 'alex@example.com',
     password: 'password123',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+    cover: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
+    location: 'San Francisco, CA',
+    website: 'https://alexrivera.dev',
     bio: 'Full Stack Engineer & Open-Source tinkerer. Building modern web platforms and distributed microservices. 🚀',
   },
   {
@@ -21,6 +24,9 @@ const demoUsers = [
     email: 'maya@example.com',
     password: 'password123',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80',
+    cover: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
+    location: 'New York, NY',
+    website: 'https://mayadesign.co',
     bio: 'Product Designer & Design Systems enthusiast. Obsessed with micro-interactions, typography, and clean UI.',
   },
   {
@@ -28,6 +34,9 @@ const demoUsers = [
     email: 'sam@example.com',
     password: 'password123',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
+    cover: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+    location: 'London, UK',
+    website: 'https://sampatel.cloud',
     bio: 'Backend & Cloud Developer. Exploring Node.js streams, Redis architectures, and GraphQL APIs. ☕',
   },
   {
@@ -35,6 +44,9 @@ const demoUsers = [
     email: 'elena@example.com',
     password: 'password123',
     avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80',
+    cover: 'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=1200&q=80',
+    location: 'Tokyo, Japan',
+    website: 'https://elenaphoto.art',
     bio: 'Visual Storyteller & Street Photographer. Capturing moments, shadows, and urban reflections.',
   },
   {
@@ -42,6 +54,9 @@ const demoUsers = [
     email: 'jordan@example.com',
     password: 'password123',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
+    cover: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
+    location: 'Seattle, WA',
+    website: 'https://jordank.ai',
     bio: 'AI/ML Researcher working on LLM agents and multi-modal generative networks. Lifelong learner.',
   },
 ];
@@ -59,7 +74,7 @@ const seedData = async () => {
       Notification.deleteMany({}),
     ]);
 
-    console.log('Seeding 5 demo users...');
+    console.log('Seeding 5 demo users with rich profiles...');
     const createdUsers = [];
     for (const u of demoUsers) {
       const passwordHash = await User.hashPassword(u.password);
@@ -68,6 +83,9 @@ const seedData = async () => {
         email: u.email,
         passwordHash,
         avatar: u.avatar,
+        cover: u.cover,
+        location: u.location,
+        website: u.website,
         bio: u.bio,
       });
       createdUsers.push(user);
@@ -100,46 +118,59 @@ const seedData = async () => {
 
     await Promise.all(createdUsers.map((u) => u.save()));
 
-    console.log('Seeding demo posts with rich media...');
+    console.log('Seeding demo posts with hashtags and media...');
     const postsData = [
       {
         author: alex._id,
-        text: '🚀 Welcome to ConnectSphere! Just shipped the full-stack architecture with React, Express, MongoDB, and real-time Socket.io notifications. What do you think of the new design?',
+        text: '🚀 Welcome to ConnectSphere! Just shipped the full-stack architecture with React, Express, MongoDB, and real-time Socket.io notifications. What do you think of the new design? #React #FullStack #WebDev',
         image: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1000&q=80',
         likes: [maya._id, sam._id, elena._id],
         commentsCount: 2,
       },
       {
         author: maya._id,
-        text: '✨ Exploring minimalist card interfaces with soft shadows and dark mode palette. Consistency across mobile and desktop creates a seamless user experience.',
+        text: '✨ Exploring minimalist card interfaces with soft shadows and dark mode palette. Consistency across mobile and desktop creates a seamless user experience. #UI #Design #DesignSystems',
         image: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1000&q=80',
         likes: [alex._id, sam._id],
         commentsCount: 1,
       },
       {
         author: elena._id,
-        text: 'Golden hour lights hitting the city streets. Taking time to notice the details around us makes all the difference.',
+        text: 'Golden hour lights hitting the city streets. Taking time to notice the details around us makes all the difference. #Photography #GoldenHour #Urban',
         image: 'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=1000&q=80',
         likes: [alex._id, maya._id, jordan._id],
         commentsCount: 1,
       },
       {
         author: sam._id,
-        text: 'Optimizing MongoDB aggregation queries for user feeds. Indexing createdAt and author arrays cuts query latency by over 70% under load. Benchmark numbers coming soon!',
+        text: 'Optimizing MongoDB aggregation queries for user feeds. Indexing createdAt and author arrays cuts query latency by over 70% under load. Benchmark numbers coming soon! #MongoDB #Backend #NodeJS',
         image: null,
         likes: [alex._id],
         commentsCount: 1,
       },
       {
         author: jordan._id,
-        text: 'Multi-agent coordination is evolving rapidly. Excited to see collaborative autonomous agents building full-stack software side-by-side.',
+        text: 'Multi-agent coordination is evolving rapidly. Excited to see collaborative autonomous agents building full-stack software side-by-side. #AI #MachineLearning #Tech',
         image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1000&q=80',
         likes: [alex._id, sam._id, elena._id],
         commentsCount: 0,
       },
     ];
 
-    const createdPosts = await Post.insertMany(postsData);
+    const createdPosts = [];
+    for (const p of postsData) {
+      const created = await Post.create(p);
+      createdPosts.push(created);
+    }
+
+    console.log('Adding bookmarks...');
+    // Alex bookmarks Maya's design post and Jordan's AI post
+    alex.bookmarks.push(createdPosts[1]._id, createdPosts[4]._id);
+    await alex.save();
+
+    // Maya bookmarks Alex's post
+    maya.bookmarks.push(createdPosts[0]._id);
+    await maya.save();
 
     console.log('Seeding demo comments...');
     const commentsData = [
@@ -160,19 +191,19 @@ const seedData = async () => {
       },
       {
         post: createdPosts[2]._id,
-        author: jordan._id,
-        text: 'Incredible shot Elena, the lighting is breathtaking.',
+        author: maya._id,
+        text: 'Breathtaking capture Elena! Which lens did you use?',
       },
       {
         post: createdPosts[3]._id,
         author: alex._id,
-        text: 'Would love to read that benchmark write-up Sam!',
+        text: 'Indexes make all the difference, especially on high-concurrency feeds!',
       },
     ];
 
     await Comment.insertMany(commentsData);
 
-    console.log('Seeding initial notifications...');
+    console.log('Seeding demo notifications...');
     const notificationsData = [
       {
         recipient: alex._id,
@@ -190,33 +221,27 @@ const seedData = async () => {
       },
       {
         recipient: alex._id,
-        sender: sam._id,
-        type: 'comment',
-        post: createdPosts[0]._id,
-        isRead: true,
-      },
-      {
-        recipient: alex._id,
         sender: elena._id,
         type: 'follow',
         isRead: false,
+      },
+      {
+        recipient: alex._id,
+        sender: sam._id,
+        type: 'like',
+        post: createdPosts[0]._id,
+        isRead: true,
       },
     ];
 
     await Notification.insertMany(notificationsData);
 
     console.log('✅ ConnectSphere database seeded successfully!');
-    console.log('Demo Accounts:');
-    console.log('1) alex_tech / password123 (Full-Stack Engineer)');
-    console.log('2) maya_designer / password123 (Product Designer)');
-    console.log('3) dev_sam / password123 (Backend Developer)');
-    console.log('4) elena_photo / password123 (Photographer)');
-    console.log('5) jordan_ai / password123 (AI Researcher)');
-
     await disconnectDB();
     process.exit(0);
   } catch (error) {
-    console.error('Seeding error:', error);
+    console.error('❌ Seeding error:', error);
+    await disconnectDB();
     process.exit(1);
   }
 };

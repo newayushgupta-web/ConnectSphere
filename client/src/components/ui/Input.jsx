@@ -5,6 +5,7 @@ const Input = forwardRef(
   (
     {
       label,
+      labelRight,
       type = 'text',
       id,
       name,
@@ -28,7 +29,7 @@ const Input = forwardRef(
 
     return (
       <div className={`w-full flex flex-col space-y-1.5 ${className}`}>
-        {label && (
+        {(label || labelRight) && (
           <label
             htmlFor={inputId}
             className="text-xs font-semibold text-slate-700 dark:text-slate-200 select-none flex items-center justify-between"
@@ -37,6 +38,7 @@ const Input = forwardRef(
               {label}
               {required && <span className="text-rose-500 ml-1" aria-hidden="true">*</span>}
             </span>
+            {labelRight && <div>{labelRight}</div>}
           </label>
         )}
 

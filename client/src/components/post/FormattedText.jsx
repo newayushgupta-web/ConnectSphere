@@ -23,6 +23,19 @@ const FormattedText = ({ text = '', className = '' }) => {
             </Link>
           );
         }
+        if (/^@[a-zA-Z0-9_]+$/.test(token)) {
+          const username = token.substring(1);
+          return (
+            <Link
+              key={index}
+              to={`/profile/${username}`}
+              onClick={(e) => e.stopPropagation()}
+              className="font-semibold text-violet-600 dark:text-violet-400 hover:underline"
+            >
+              {token}
+            </Link>
+          );
+        }
         return token;
       })}
     </p>
