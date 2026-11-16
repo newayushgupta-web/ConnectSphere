@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const path = require('path');
+const fs = require('fs');
 
 let mongodInstance = null;
 
@@ -10,13 +12,31 @@ const connectDB = async () => {
   try {
     let mongoUri = process.env.MONGODB_URI;
 
-    // If no URI is provided, use MongoMemoryServer for instant zero-config dev/test
+    // If no URI is provided, use MongoMemoryServer
     if (!mongoUri || mongoUri.trim() === '') {
-      console.log('No MONGODB_URI provided. Initializing in-memory MongoDB instance for local dev/testing...');
+      const isTestEnv = process.env.NODE_ENV === 'test';
       const { MongoMemoryServer } = require('mongodb-memory-server');
-      mongodInstance = await MongoMemoryServer.create();
+
+      if (isTestEnv) {
+        // Ephemeral in-memory for unit test isolation
+        mongodInstance = await MongoMemoryServer.create();
+      } else {
+        // Persistent embedded database in development so data survives restarts!
+        const dbPath = path.join(__dirname, '..', '.mongo-data');
+        if (!fs.existsSync(dbPath)) {
+          fs.mkdirSync(dbPath, { recursive: true });
+        }
+        console.log(`Using persistent local database storage at: ${dbPath}`);
+        mongodInstance = await MongoMemoryServer.create({
+          instance: {
+            dbPath,
+            storageEngine: 'wiredTiger',
+          },
+        });
+      }
+
       mongoUri = mongodInstance.getUri();
-      console.log(`In-memory MongoDB started at: ${mongoUri}`);
+      console.log(`Local MongoDB started at: ${mongoUri}`);
     }
 
     const conn = await mongoose.connect(mongoUri, {

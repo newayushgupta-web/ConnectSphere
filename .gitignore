@@ -25,6 +25,8 @@ build/
 # Uploads & temporary files
 server/uploads/*
 !server/uploads/.gitkeep
+server/.mongo-data/
+.mongo-data/
 tmp/
 temp/
 
